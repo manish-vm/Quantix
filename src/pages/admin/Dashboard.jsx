@@ -6,7 +6,7 @@ import {
   PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 
-const COLORS = ['#1890ff', '#52c41a', '#722ed1', '#ff4d4f', '#faad14'];
+// const COLORS = ['#1890ff', '#52c41a', '#722ed1', '#ff4d4f', '#faad14'];
 const MATCH_COLORS = { match: '#52c41a', mismatch: '#ff4d4f' };
 
 const Dashboard = () => {

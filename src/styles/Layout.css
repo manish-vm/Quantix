@@ -11,11 +11,19 @@
   align-items: center;
   padding: 0 24px;
   height: 64px;
-  background: #fff;
+  background: white;
+  background-size: 200% 200%;
+  animation: navGradientShift 8s ease infinite;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+@keyframes navGradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .quantix-layout__brand {
@@ -27,11 +35,22 @@
 .quantix-layout__logo {
   height: 50px;
   width: 80px;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.quantix-layout__brand:hover .quantix-layout__logo {
+  transform: scale(1.15) rotate(-5deg);
 }
 
 .quantix-layout__logo-text {
   height: 30px;
   width: 100px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.quantix-layout__brand:hover .quantix-layout__logo-text {
+  opacity: 0.85;
+  transform: translateX(4px);
 }
 
 .quantix-layout__nav-right-area {
@@ -47,31 +66,92 @@
 }
 
 .quantix-layout__nav-link {
+  position: relative;
   text-decoration: none;
   color: #333;
   padding: 8px 16px;
   border-radius: 4px;
   font-weight: 500;
-  transition: all 0.3s;
+  transition: color 0.3s ease;
+  overflow: hidden;
+}
+
+.quantix-layout__nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: #1890ff;
+  border-radius: 2px;
+  transition: width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), left 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.quantix-layout__nav-link:hover::after {
+  width: 80%;
+  left: 10%;
+}
+
+.quantix-layout__nav-link:hover {
+  color: #1890ff;
 }
 
 .quantix-layout__nav-link--active {
   color: #1890ff;
 }
 
+.quantix-layout__nav-link--active::after {
+  width: 80%;
+  left: 10%;
+  background: #1890ff;
+  animation: activePulse 2s infinite;
+}
+
+@keyframes activePulse {
+  0% { box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(24, 144, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(24, 144, 255, 0); }
+}
+
 .quantix-layout__user-name {
   color: #666;
   font-size: 14px;
+  animation: fadeSlideIn 0.6s ease-out both;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .quantix-layout__logout-btn {
   padding: 8px 16px;
-  background: #ff4d4f;
+  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background-size: 200% 200%;
   color: #fff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background-position 0.5s ease;
+}
+
+.quantix-layout__logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.35);
+  background-position: right center;
+}
+
+.quantix-layout__logout-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(255, 77, 79, 0.25);
 }
 
 .quantix-layout__main {

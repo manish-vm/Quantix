@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Footer from './Footer';
 import '../styles/Layout.css';
 
 const Layout = () => {
@@ -38,9 +39,7 @@ const Layout = () => {
       <main className="quantix-layout__main">
         <Outlet />
       </main>
-      <footer className="quantix-layout__footer">
-        © {new Date().getFullYear()} Quantix. All rights reserved.
-      </footer>
+      <Footer />
     </div>
   );
 };

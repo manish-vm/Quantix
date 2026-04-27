@@ -8,6 +8,7 @@ import Dashboard from './pages/admin/Dashboard';
 import ProductMaster from './pages/admin/ProductMaster';
 import Reports from './pages/admin/Reports';
 import Scanner from './pages/employee/Scanner';
+import Footer from './components/Footer';
 import './styles/App.css';
 
 function AppRoutes() {
@@ -29,6 +30,7 @@ function AppRoutes() {
         <Route path="products" element={<PrivateRoute role="admin"><ProductMaster /></PrivateRoute>} />
         <Route path="reports" element={<PrivateRoute role="admin"><Reports /></PrivateRoute>} />
         <Route path="scan" element={<PrivateRoute role="employee"><Scanner /></PrivateRoute>} />
+        <Route path="footer" element={<Footer/>} />
       </Route>
     </Routes>
   );

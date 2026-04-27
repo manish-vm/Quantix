@@ -1,0 +1,258 @@
+/* ProductMaster Page */
+.quantix-product-master {
+  width: 100%;
+}
+
+.quantix-product-master__title {
+  margin-bottom: 24px;
+  font-size: 24px;
+}
+
+.quantix-product-master__message {
+  padding: 12px;
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  color: #096dd9;
+}
+
+.quantix-product-master__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.quantix-product-master__card {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.quantix-product-master__card-title {
+  margin-bottom: 16px;
+}
+
+.quantix-product-master__input {
+  padding: 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+.quantix-product-master__input--inline {
+  margin-bottom: 0;
+  padding: 6px 10px;
+}
+
+.quantix-product-master__button {
+  padding: 10px 20px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.quantix-product-master__button--green {
+  background: #52c41a;
+}
+
+.quantix-product-master__button--grey {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.quantix-product-master__filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.quantix-product-master__filters .quantix-product-master__input {
+  flex: 1;
+  min-width: 160px;
+  margin-bottom: 0;
+}
+
+.quantix-product-master__upload-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+.quantix-product-master__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.quantix-product-master__table thead tr {
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.quantix-product-master__table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 14px;
+  color: #666;
+}
+
+.quantix-product-master__table td {
+  padding: 12px;
+  font-size: 14px;
+}
+
+.quantix-product-master__table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.quantix-product-master__part-no {
+  font-weight: 500;
+}
+
+.quantix-product-master__badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.quantix-product-master__badge--success {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.quantix-product-master__badge--error {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.quantix-product-master__no-baseline {
+  color: #999;
+  font-size: 12px;
+}
+
+.quantix-product-master__empty {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+}
+
+.quantix-product-master__action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.quantix-product-master__action-btn--edit {
+  background: #1890ff;
+  color: #fff;
+}
+
+.quantix-product-master__action-btn--delete {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.quantix-product-master__action-btn--save {
+  background: #52c41a;
+  color: #fff;
+}
+
+.quantix-product-master__action-btn--cancel {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.quantix-product-master__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.quantix-product-master__pagination-btn {
+  padding: 8px 16px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.quantix-product-master__pagination-btn:disabled {
+  background: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.quantix-product-master__pagination-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.quantix-product-master__filters .quantix-product-master__suggest-wrap {
+  flex: 1;
+  min-width: 160px;
+}
+
+.quantix-product-master__suggest-wrap {
+  position: relative;
+}
+
+.quantix-product-master__suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.quantix-product-master__suggestions li {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.quantix-product-master__suggestions li:last-child {
+  border-bottom: none;
+}
+
+.quantix-product-master__suggestions li:hover {
+  background: #e6f7ff;
+  color: #096dd9;
+}
+
+@media (max-width: 768px) {
+  .quantix-product-master__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quantix-product-master__action-btn {
+    margin-bottom: 4px;
+  }
+}

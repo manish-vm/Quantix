@@ -1,0 +1,272 @@
+/* Scanner Page */
+.quantix-scanner {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.quantix-scanner__title {
+  margin-bottom: 24px;
+  font-size: 24px;
+  text-align: center;
+}
+
+.quantix-scanner__card {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+}
+
+.quantix-scanner__card--center {
+  text-align: center;
+}
+
+.quantix-scanner__card--error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  color: #cf1322;
+}
+
+.quantix-scanner__card--success {
+  background: #f6ffed;
+  border: 2px solid #52c41a;
+  text-align: center;
+}
+
+.quantix-scanner__card--fail {
+  background: #fff2f0;
+  border: 2px solid #ff4d4f;
+  text-align: center;
+}
+
+.quantix-scanner__qr-container {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.quantix-scanner__section-title {
+  margin-bottom: 12px;
+}
+
+.quantix-scanner__form {
+  display: flex;
+  gap: 8px;
+}
+
+.quantix-scanner__input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.quantix-scanner__input--full {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.quantix-scanner__input--readonly {
+  background: #f5f5f5;
+}
+
+.quantix-scanner__button {
+  padding: 12px 24px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.quantix-scanner__button--small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.quantix-scanner__button--small-gray {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #f0f0f0;
+  color: #333;
+}
+
+.quantix-scanner__button--reset {
+  margin-left: 12px;
+  padding: 6px 12px;
+  background: #ff4d4f;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.quantix-scanner__button--validate {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.quantix-scanner__button--validate:disabled {
+  background: #d9d9d9;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.quantix-scanner__button--validate:not(:disabled) {
+  background: #1890ff;
+  color: #fff;
+}
+
+.quantix-scanner__product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.quantix-scanner__product-title {
+  margin: 0;
+}
+
+.quantix-scanner__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.quantix-scanner__table th,
+.quantix-scanner__table td {
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  text-align: left;
+}
+
+.quantix-scanner__table thead tr {
+  background: #fafafa;
+}
+
+.quantix-scanner__table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.quantix-scanner__part-no {
+  font-weight: bold;
+}
+
+.quantix-scanner__weight-value {
+  color: #1890ff;
+  font-weight: bold;
+}
+
+.quantix-scanner__weight-placeholder {
+  color: #999;
+  font-weight: bold;
+}
+
+.quantix-scanner__remaining {
+  color: #52c41a;
+  font-weight: bold;
+}
+
+.quantix-scanner__mode-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quantix-scanner__mode-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  cursor: pointer;
+  background: #fff;
+  color: #333;
+  font-weight: 500;
+}
+
+.quantix-scanner__mode-btn--active {
+  background: #1890ff;
+  color: #fff;
+  border-color: #1890ff;
+}
+
+.quantix-scanner__input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quantix-scanner__input-row--wrap {
+  flex-wrap: wrap;
+}
+
+.quantix-scanner__connect-btn {
+  padding: 12px 16px;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.quantix-scanner__connect-btn--bt {
+  background: #722ed1;
+}
+
+.quantix-scanner__connect-btn--bt-connected {
+  background: #52c41a;
+}
+
+.quantix-scanner__connect-btn--wifi {
+  background: #13c2c2;
+}
+
+.quantix-scanner__connect-btn--wifi-connected {
+  background: #52c41a;
+}
+
+.quantix-scanner__validation-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.quantix-scanner__validation-status {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.quantix-scanner__validation-status--match {
+  color: #52c41a;
+}
+
+.quantix-scanner__validation-status--mismatch {
+  color: #ff4d4f;
+}
+
+.quantix-scanner__validation-detail {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+  .quantix-scanner__input-row {
+    flex-direction: column;
+  }
+
+  .quantix-scanner__mode-buttons {
+    flex-wrap: wrap;
+  }
+}
+

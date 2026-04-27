@@ -1,0 +1,96 @@
+/* Login Page */
+.quantix-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+}
+
+.quantix-login__card {
+  background: #fff;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  margin: 20px;
+}
+.quantix-login__card > img{
+  display: block;
+  margin-left: -15px;
+  margin-top: -25px;  
+  width: 350px;
+}
+.quantix-login__title {
+  text-align: center;
+  margin-bottom: 8px;
+  color: #1890ff;
+}
+
+.quantix-login__subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.quantix-login__error {
+  padding: 12px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 6px;
+  color: #cf1322;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.quantix-login__label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.quantix-login__input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.quantix-login__button {
+  width: 100%;
+  padding: 12px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.quantix-login__button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.quantix-login__toggle {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.quantix-login__toggle-btn {
+  background: none;
+  border: none;
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+

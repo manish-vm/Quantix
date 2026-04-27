@@ -1,0 +1,8 @@
+/* App Loading Screen */
+.quantix-app-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+

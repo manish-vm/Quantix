@@ -1,0 +1,124 @@
+/* Reports Page */
+.quantix-reports {
+  width: 100%;
+}
+
+.quantix-reports__title {
+  margin-bottom: 24px;
+  font-size: 24px;
+}
+
+.quantix-reports__section {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+}
+
+.quantix-reports__section-title {
+  margin-bottom: 16px;
+}
+
+.quantix-reports__filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.quantix-reports__input {
+  padding: 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.quantix-reports__button {
+  padding: 10px 20px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.quantix-reports__button--secondary {
+  background: #666;
+}
+
+.quantix-reports__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.quantix-reports__table thead tr {
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.quantix-reports__table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 14px;
+  color: #666;
+}
+
+.quantix-reports__table td {
+  padding: 12px;
+  font-size: 14px;
+}
+
+.quantix-reports__table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.quantix-reports__part-no {
+  font-weight: 500;
+}
+
+.quantix-reports__badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.quantix-reports__badge--success {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.quantix-reports__badge--error {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.quantix-reports__time {
+  color: #666;
+}
+
+.quantix-reports__empty {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+}
+
+.quantix-reports__status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.quantix-reports__status-badge--match {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.quantix-reports__status-badge--mismatch {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border: 1px solid #ffccc7;
+}
+

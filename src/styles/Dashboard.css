@@ -1,0 +1,153 @@
+/* Dashboard Page */
+.quantix-dashboard {
+  width: 100%;
+}
+
+.quantix-dashboard__title {
+  margin-bottom: 24px;
+  font-size: 24px;
+}
+
+.quantix-dashboard__stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.quantix-dashboard__stat-card {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex: 1;
+  min-width: 200px;
+}
+
+.quantix-dashboard__stat-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.quantix-dashboard__stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.quantix-dashboard__stat-value--green {
+  color: #52c41a;
+}
+
+.quantix-dashboard__stat-value--purple {
+  color: #722ed1;
+}
+
+.quantix-dashboard__charts {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.quantix-dashboard__chart-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.quantix-dashboard__chart-card {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex: 1;
+  min-width: 300px;
+}
+
+.quantix-dashboard__chart-card--half {
+  flex: 1 1 calc(50% - 12px);
+  min-width: 300px;
+}
+
+.quantix-dashboard__chart-title {
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.quantix-dashboard__recent {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.quantix-dashboard__section-title {
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+.quantix-dashboard__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.quantix-dashboard__table thead tr {
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.quantix-dashboard__table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 14px;
+  color: #666;
+}
+
+.quantix-dashboard__table td {
+  padding: 12px;
+  font-size: 14px;
+}
+
+.quantix-dashboard__table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.quantix-dashboard__badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.quantix-dashboard__badge--match {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.quantix-dashboard__badge--mismatch {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border: 1px solid #ffccc7;
+}
+
+.quantix-dashboard__time {
+  color: #666;
+}
+
+.quantix-dashboard__empty {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .quantix-dashboard__chart-card--half {
+    flex: 1 1 100%;
+  }
+}
+
+

@@ -13,7 +13,7 @@ const Layout = () => {
       <nav className="quantix-layout__nav">
         <div className="quantix-layout__brand">
           <img src="Quantix-logopic.png" alt="Quantix Logo" className="quantix-layout__logo" />
-          <img src="Quantix-logo-text.png" alt="Quantix Logo Text" className="quantix-layout__logo-text" />
+          <img src="quantix-logo-text.png" alt="Quantix Logo Text" className="quantix-layout__logo-text" />
         </div>
         <div className="quantix-layout__nav-right-area">
           <div className="quantix-layout__nav-links">

@@ -19,6 +19,37 @@ const Scanner = () => {
   const scannerRef = useRef(null);
   const scannerContainerId = 'qr-reader';
 
+  const isScanningRef = useRef(false);
+
+  const handleScan = useCallback(async (partNo) => {
+    if (isScanningRef.current) return;
+    isScanningRef.current = true;
+    setLoading(true);
+    setError('');
+    setValidationResult(null);
+    setScanResult(null);
+    setWeight('');
+    setConnectionMode('manual');
+    setBluetoothConnected(false);
+    setWifiConnected(false);
+    bluetoothScale.disconnect();
+    wifiScale.disconnect();
+
+    try {
+      const res = await api.get(`/demo-data/${partNo}`);
+      setScanResult(res.data);
+    } catch (err) {
+      if (err.response?.data?.requiresDemoData) {
+        setError(`No baseline data for ${partNo}. Please ask admin to create demo data.`);
+      } else {
+        setError(err.response?.data?.message || 'Product not found');
+      }
+    } finally {
+      setLoading(false);
+      isScanningRef.current = false;
+    }
+  }, [setLoading, setError, setValidationResult, setScanResult, setWeight, setConnectionMode, setBluetoothConnected, setWifiConnected]);
+
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
       try {
@@ -57,7 +88,7 @@ const Scanner = () => {
       console.error('Scanner init error:', err);
       setError('Camera access denied or not available. You can enter Part No manually below.');
     }
-  }, []);
+  }, [handleScan]);
 
   useEffect(() => {
     startScanner();
@@ -67,33 +98,6 @@ const Scanner = () => {
       wifiScale.disconnect();
     };
   }, [startScanner, stopScanner]);
-
-  const handleScan = async (partNo) => {
-    if (loading) return;
-    setLoading(true);
-    setError('');
-    setValidationResult(null);
-    setScanResult(null);
-    setWeight('');
-    setConnectionMode('manual');
-    setBluetoothConnected(false);
-    setWifiConnected(false);
-    bluetoothScale.disconnect();
-    wifiScale.disconnect();
-
-    try {
-      const res = await api.get(`/demo-data/${partNo}`);
-      setScanResult(res.data);
-    } catch (err) {
-      if (err.response?.data?.requiresDemoData) {
-        setError(`No baseline data for ${partNo}. Please ask admin to create demo data.`);
-      } else {
-        setError(err.response?.data?.message || 'Product not found');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleValidate = async () => {
     if (!scanResult || !weight) return;
@@ -333,7 +337,11 @@ const Scanner = () => {
                 {validationResult.status === 'match' ? '✅' : '❌'}
               </div>
               <div className={`quantix-scanner__validation-status ${validationResult.status === 'match' ? 'quantix-scanner__validation-status--match' : 'quantix-scanner__validation-status--mismatch'}`}>
-                {validationResult.status === 'match' ? 'MATCH' : 'MISMATCH'}
+                {(() => {
+                  if (validationResult.status === 'match') return 'MATCH';
+                  if (validationResult.measuredWeight > validationResult.expectedWeight) return 'OVERWEIGHT';
+                  return 'UNDERWEIGHT';
+                })()}
               </div>
               <div className="quantix-scanner__validation-detail">
                 Measured: {validationResult.measuredWeight} kg

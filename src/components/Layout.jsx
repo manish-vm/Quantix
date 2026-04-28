@@ -12,8 +12,8 @@ const Layout = () => {
     <div className="quantix-layout">
       <nav className="quantix-layout__nav">
         <div className="quantix-layout__brand">
-          <img src="Quantix-logopic.png" alt="Quantix Logo" className="quantix-layout__logo" />
-          <img src="quantix-logo-text.png" alt="Quantix Logo Text" className="quantix-layout__logo-text" />
+          <img src="/Quantix-logopic.png" alt="Quantix Logo" className="quantix-layout__logo" />
+          <img src="/quantix-logo-text.png" alt="Quantix Logo Text" className="quantix-layout__logo-text" />
         </div>
         <div className="quantix-layout__nav-right-area">
           <div className="quantix-layout__nav-links">
@@ -21,7 +21,7 @@ const Layout = () => {
               <>
                 <Link to="/" className={`quantix-layout__nav-link ${location.pathname === '/' ? 'quantix-layout__nav-link--active' : ''}`}>Dashboard</Link>
                 <Link to="/products" className={`quantix-layout__nav-link ${location.pathname === '/products' ? 'quantix-layout__nav-link--active' : ''}`}>Products</Link>
-                <Link to="/reports" className={`quantix-layout__nav-link ${location.pathname === '/reports' ? 'quantix-layout__nav-link--active' : ''}`}>Reports</Link>
+<Link to="/reports" className={`quantix-layout__nav-link ${location.pathname.startsWith('/reports') ? 'quantix-layout__nav-link--active' : ''}`}>Reports</Link>
               </>
             )}
             {user?.role === 'employee' && (

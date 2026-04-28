@@ -141,7 +141,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="quantix-dashboard__recent">
+      {/* <div className="quantix-dashboard__recent">
         <h2 className="quantix-dashboard__section-title">Recent Scan Activity</h2>
         <table className="quantix-dashboard__table">
           <thead>
@@ -159,9 +159,19 @@ const Dashboard = () => {
                 <td>{scan.partNo}</td>
                 <td>{scan.measuredWeight} kg</td>
                 <td>
-                  <span className={`quantix-dashboard__badge ${scan.status === 'match' ? 'quantix-dashboard__badge--match' : 'quantix-dashboard__badge--mismatch'}`}>
-                    {scan.status === 'match' ? 'Match' : 'Mismatch'}
-                  </span>
+                  {(() => {
+                    const getStatusDisplay = () => {
+                      if (scan.status === 'match') return { text: 'Match', className: 'quantix-dashboard__badge--match' };
+                      if (scan.measuredWeight > scan.expectedWeight) return { text: 'Overweight', className: 'quantix-dashboard__badge--mismatch' };
+                      return { text: 'Underweight', className: 'quantix-dashboard__badge--mismatch' };
+                    };
+                    const statusDisplay = getStatusDisplay();
+                    return (
+                      <span className={`quantix-dashboard__badge ${statusDisplay.className}`}>
+                        {statusDisplay.text}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td>{scan.scannedByName}</td>
                 <td className="quantix-dashboard__time">
@@ -176,7 +186,7 @@ const Dashboard = () => {
             )}
           </tbody>
         </table>
-      </div>
+      </div> */}
     </div>
   );
 };

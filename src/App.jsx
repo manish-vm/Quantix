@@ -7,6 +7,8 @@ import Login from './pages/auth/Login';
 import Dashboard from './pages/admin/Dashboard';
 import ProductMaster from './pages/admin/ProductMaster';
 import Reports from './pages/admin/Reports';
+import ProductSummary from './pages/admin/ProductSummary';
+import ScanLogs from './pages/admin/ScanLogs';
 import Scanner from './pages/employee/Scanner';
 import Footer from './components/Footer';
 import './styles/App.css';
@@ -28,7 +30,10 @@ function AppRoutes() {
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={user?.role === 'admin' ? <Dashboard /> : <Scanner />} />
         <Route path="products" element={<PrivateRoute role="admin"><ProductMaster /></PrivateRoute>} />
-        <Route path="reports" element={<PrivateRoute role="admin"><Reports /></PrivateRoute>} />
+<Route path="reports" element={<PrivateRoute role="admin"><Reports /></PrivateRoute>}>
+          <Route path="product-summary" element={<PrivateRoute role="admin"><ProductSummary /></PrivateRoute>} />
+          <Route path="scan-logs" element={<PrivateRoute role="admin"><ScanLogs /></PrivateRoute>} />
+        </Route>
         <Route path="scan" element={<PrivateRoute role="employee"><Scanner /></PrivateRoute>} />
         <Route path="footer" element={<Footer/>} />
       </Route>

@@ -10,7 +10,7 @@ const Footer = () => {
         <div className="footer-section">
        
          <div className="footer-logo-img-container">
-            <img src="Quantix-logopic.png" alt="Quantix Logo" className="footer-logo-image" /> 
+            <img src="/Quantix-logopic.png" alt="Quantix Logo" className="footer-logo-image" /> 
          </div>
           <h2 className="footer-logo">Quantix</h2>
           

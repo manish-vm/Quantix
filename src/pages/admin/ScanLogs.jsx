@@ -8,6 +8,16 @@ const ScanLogs = () => {
   const [loading, setLoading] = useState(true);
   const isFirstFilterEffect = useRef(true);
 
+  const formatWeight = (value) => {
+    if (value === null || value === undefined || value === '') return 'NA';
+    return `${parseFloat(value).toFixed(3)} kg`;
+  };
+
+  const formatCount = (value) => {
+    if (value === null || value === undefined || value === '') return 'NA';
+    return parseFloat(value).toFixed(2);
+  };
+
   useEffect(() => {
     fetchScanLogs();
   }, []);
@@ -79,13 +89,21 @@ const ScanLogs = () => {
 
       <div className="quantix-reports__section">
         <h3 className="quantix-reports__section-title">Scan Logs</h3>
+        <div className="quantix-reports__table-wrapper">
         <table className="quantix-reports__table">
           <thead>
             <tr>
               <th>Part No</th>
               <th>Description</th>
-              <th>Measured</th>
-              <th>Expected</th>
+              <th>Unit Weight</th>
+              <th>Overall Weight</th>
+              <th>Received Weight</th>
+              <th>Underweight of</th>
+              <th>Overweight of</th>
+              <th>Total Ideal Product Count</th>
+              <th>Based on Received Weight Product Count</th>
+              <th>Product Delay</th>
+              <th>Excess Product</th>
               <th>Status</th>
               <th>Scanned By</th>
               <th>Date & Time</th>
@@ -93,11 +111,18 @@ const ScanLogs = () => {
           </thead>
           <tbody>
             {logs.map((log) => (
-              <tr key={log._id}>
-                <td>{log.partNo}</td>
-                <td>{log.partDescription}</td>
-                <td>{log.measuredWeight} kg</td>
-                <td>{log.expectedWeight} kg</td>
+              <tr key={log.partNo}>
+                <td className="quantix-reports__part-no">{log.partNo}</td>
+                <td>{log.description}</td>
+                <td>{formatWeight(log.unitWeight)}</td>
+                <td>{formatWeight(log.overallWeight)}</td>
+                <td>{formatWeight(log.receivedWeight)}</td>
+                <td>{formatWeight(log.underweight)}</td>
+                <td>{formatWeight(log.overweight)}</td>
+                <td>{formatCount(log.totalIdealProductCount)}</td>
+                <td>{formatCount(log.basedOnReceivedWeightProductCount)}</td>
+                <td>{formatCount(log.productDelay)}</td>
+                <td>{formatCount(log.excessProduct)}</td>
                 <td>
                   {(() => {
                     const getStatusDisplay = () => {
@@ -121,11 +146,12 @@ const ScanLogs = () => {
             ))}
             {logs.length === 0 && (
               <tr>
-                <td colSpan="7" className="quantix-reports__empty">No scan logs found</td>
+                <td colSpan="14" className="quantix-reports__empty">No scan logs found</td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </>
   );

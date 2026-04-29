@@ -41,16 +41,11 @@ const ProductSummary = () => {
           <thead>
             <tr>
               <th>Part No</th>
-              <th>Description</th>
+              <th>Part Description</th>
               <th>Unit Weight</th>
               <th>Overall Weight</th>
-              <th>Received Weight</th>
-              <th>Underweight of</th>
-              <th>Overweight of</th>
               <th>Total Ideal Product Count</th>
-              <th>Based on Received Weight Product Count</th>
-              <th>Product Delay</th>
-              <th>Excess Product</th>
+              <th>Remaining Count</th>
             </tr>
           </thead>
           <tbody>
@@ -60,18 +55,13 @@ const ProductSummary = () => {
                 <td>{item.description}</td>
                 <td>{formatWeight(item.unitWeight)}</td>
                 <td>{formatWeight(item.overallWeight)}</td>
-                <td>{formatWeight(item.receivedWeight)}</td>
-                <td>{formatWeight(item.underweight)}</td>
-                <td>{formatWeight(item.overweight)}</td>
                 <td>{formatCount(item.totalIdealProductCount)}</td>
-                <td>{formatCount(item.basedOnReceivedWeightProductCount)}</td>
-                <td>{formatCount(item.productDelay)}</td>
-                <td>{formatCount(item.excessProduct)}</td>
+                <td>{formatCount(item.remainingCount)}</td>
               </tr>
             ))}
             {productReport.length === 0 && (
               <tr>
-                <td colSpan="11" className="quantix-reports__empty">No data available</td>
+                <td colSpan="6" className="quantix-reports__empty">No data available</td>
               </tr>
             )}
           </tbody>

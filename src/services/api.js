@@ -27,5 +27,9 @@ api.interceptors.response.use(
   }
 );
 
+export const getScanSummary = () => api.get('/scan/summary');
+export const getRecentScanLogs = () => api.get('/scan/recent');
+export const getScanHistory = (partNo) => api.get('/scan/history', { params: { partNo } });
+
 export default api;
 

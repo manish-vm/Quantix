@@ -1,7 +1,21 @@
 /* Scanner Page */
 .quantix-scanner {
-  max-width: 700px;
+  max-width: 1100px;
   margin: 0 auto;
+}
+
+.quantix-scanner__scan-grid {
+  display: grid;
+  grid-template-columns: 1.55fr 0.95fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.quantix-scanner__scan-grid-main,
+.quantix-scanner__scan-grid-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .quantix-scanner__title {
@@ -260,7 +274,144 @@
   margin-bottom: 4px;
 }
 
+.quantix-scanner__card--summary {
+  background: #f0f7ff;
+  border: 1px solid #b3d8ff;
+}
+
+.quantix-scanner__summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.quantix-scanner__summary-table tbody tr {
+  border-bottom: 1px solid #d9d9d9;
+}
+
+.quantix-scanner__summary-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.quantix-scanner__summary-table td {
+  padding: 12px 8px;
+}
+
+.quantix-scanner__summary-table td:first-child {
+  color: #666;
+  font-weight: 500;
+  width: 60%;
+}
+
+.quantix-scanner__summary-value {
+  color: #1890ff;
+  font-weight: 700;
+  text-align: right;
+}
+
+.quantix-scanner__card--logs {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+}
+
+.quantix-scanner__logs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quantix-scanner__log-entry {
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid;
+}
+
+.quantix-scanner__log-entry--match {
+  background: #f6ffed;
+  border-left-color: #52c41a;
+}
+
+.quantix-scanner__log-entry--mismatch {
+  background: #fff2f0;
+  border-left-color: #ff4d4f;
+}
+
+.quantix-scanner__log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.quantix-scanner__log-part {
+  font-weight: 700;
+  color: #333;
+}
+
+.quantix-scanner__log-status {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+
+.quantix-scanner__log-status--match {
+  background: #52c41a;
+  color: #fff;
+}
+
+.quantix-scanner__log-status--mismatch {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.quantix-scanner__log-details {
+  font-size: 13px;
+  color: #666;
+}
+
+.quantix-scanner__log-detail {
+  margin-bottom: 4px;
+}
+
+.quantix-scanner__log-detail span {
+  font-weight: 600;
+  color: #333;
+}
+
+.quantix-scanner__logs-table {
+  margin-top: 16px;
+}
+
+.quantix-scanner__log-row--match td {
+  background: #f6ffed;
+}
+
+.quantix-scanner__log-row--mismatch td {
+  background: #fff2f0;
+}
+
+.quantix-scanner__status-cell {
+  font-weight: 700;
+  padding: 12px;
+}
+
+.quantix-scanner__status--match {
+  color: #52c41a;
+}
+
+.quantix-scanner__status--mismatch {
+  color: #ff4d4f;
+}
+
+@media (max-width: 992px) {
+  .quantix-scanner__scan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
+
   .quantix-scanner__input-row {
     flex-direction: column;
   }

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import api from '../../services/api';
+import api, { getScanSummary } from '../../services/api';
 import bluetoothScale from '../../utils/bluetooth';
 import wifiScale from '../../utils/wifi';
 import '../../styles/Scanner.css';
@@ -16,6 +16,8 @@ const Scanner = () => {
   const [wifiUrl, setWifiUrl] = useState('');
   const [wifiConnected, setWifiConnected] = useState(false);
   const [error, setError] = useState('');
+  const [scanSummary, setScanSummary] = useState(null);
+  const [productLogs, setProductLogs] = useState([]);
   const scannerRef = useRef(null);
   const scannerContainerId = 'qr-reader';
 
@@ -32,12 +34,21 @@ const Scanner = () => {
     setConnectionMode('manual');
     setBluetoothConnected(false);
     setWifiConnected(false);
+    setProductLogs([]);
     bluetoothScale.disconnect();
     wifiScale.disconnect();
 
     try {
       const res = await api.get(`/demo-data/${partNo}`);
       setScanResult(res.data);
+
+      // Fetch logs for this specific product
+      try {
+        const logsRes = await api.get('/scan/history', { params: { partNo } });
+        setProductLogs(logsRes.data || []);
+      } catch (err) {
+        console.error('Failed to fetch product logs:', err);
+      }
     } catch (err) {
       if (err.response?.data?.requiresDemoData) {
         setError(`No baseline data for ${partNo}. Please ask admin to create demo data.`);
@@ -92,6 +103,17 @@ const Scanner = () => {
 
   useEffect(() => {
     startScanner();
+
+    const fetchData = async () => {
+      try {
+        const summaryRes = await getScanSummary();
+        setScanSummary(summaryRes.data);
+      } catch (err) {
+        console.error('Failed to fetch scan summary:', err);
+      }
+    };
+    fetchData();
+
     return () => {
       stopScanner();
       bluetoothScale.disconnect();
@@ -111,6 +133,28 @@ const Scanner = () => {
       });
       setValidationResult(res.data);
       setScanResult(prev => ({ ...prev, remainingCount: res.data.remainingCount }));
+
+      // Refetch data after successful scan
+      try {
+        const summaryRes = await getScanSummary();
+        setScanSummary(summaryRes.data);
+      } catch (err) {
+        console.error('Failed to refetch scan summary:', err);
+      }
+      try {
+        const logsRes = await api.get('/scan/history', { params: { partNo: scanResult.partNo } });
+        setProductLogs(logsRes.data || []);
+      } catch (err) {
+        console.error('Failed to refetch product logs:', err);
+      }
+      
+      // Also refetch scanResult to ensure remainingCount is updated
+      try {
+        const res = await api.get(`/demo-data/${scanResult.partNo}`);
+        setScanResult(res.data);
+      } catch (err) {
+        console.error('Failed to refetch scan result:', err);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Validation failed');
     } finally {
@@ -182,11 +226,13 @@ const Scanner = () => {
     setConnectionMode('manual');
     setBluetoothConnected(false);
     setWifiConnected(false);
+    setProductLogs([]);
     bluetoothScale.disconnect();
     wifiScale.disconnect();
   };
 
   return (
+    <>
     <div className="quantix-scanner">
       <h1 className="quantix-scanner__title">Product Scanner</h1>
 
@@ -223,14 +269,15 @@ const Scanner = () => {
       )}
 
       {scanResult && (
-        <div>
-          <div className="quantix-scanner__card">
-            <div className="quantix-scanner__product-header">
-              <h3 className="quantix-scanner__product-title">Product Details</h3>
-              <button onClick={resetScan} className="quantix-scanner__button--small-gray">
-                New Scan
-              </button>
-            </div>
+        <div className="quantix-scanner__scan-grid">
+          <div className="quantix-scanner__scan-grid-main">
+            <div className="quantix-scanner__card">
+              <div className="quantix-scanner__product-header">
+                <h3 className="quantix-scanner__product-title">Product Details</h3>
+                <button onClick={resetScan} className="quantix-scanner__button--small-gray">
+                  New Scan
+                </button>
+              </div>
 
             <table className="quantix-scanner__table">
               <thead>
@@ -357,9 +404,46 @@ const Scanner = () => {
               </div>
             </div>
           )}
+          </div>
+
+          <aside className="quantix-scanner__scan-grid-side">
+            
+            {productLogs.length > 0 && (
+              <div className="quantix-scanner__card quantix-scanner__card--logs">
+                <h3 className="quantix-scanner__section-title">Scan History for {scanResult.partNo}</h3>
+                <table className="quantix-scanner__table quantix-scanner__logs-table">
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Measured Weight</th>
+                      <th>Expected Weight</th>
+                      <th>Expected Count</th>
+                      <th>Scanned By</th>
+                      <th>Date & Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productLogs.map((log) => (
+                      <tr key={log._id} className={`quantix-scanner__log-row quantix-scanner__log-row--${log.status}`}>
+                        <td className={`quantix-scanner__status-cell quantix-scanner__status--${log.status}`}>
+                          {log.status.toUpperCase()}
+                        </td>
+                        <td>{log.measuredWeight ? log.measuredWeight.toFixed(2) : log.measuredWeight} kg</td>
+                        <td>{log.expectedWeight ? log.expectedWeight.toFixed(2) : log.expectedWeight} kg</td>
+                        <td>{log.expectedCount}</td>
+                        <td>{log.scannedByName || 'N/A'}</td>
+                        <td>{new Date(log.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </aside>
         </div>
       )}
-    </div>
+   </div>
+    </>
   );
 };
 

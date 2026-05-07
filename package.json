@@ -12,8 +12,9 @@
     "recharts": "^3.8.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "fix:html5-qrcode-sourcemaps": "node ./fix-html5-qrcode-sourcemaps.js",
+    "start": "npm run fix:html5-qrcode-sourcemaps && set GENERATE_SOURCEMAP=false && react-scripts start",
+    "build": "npm run fix:html5-qrcode-sourcemaps && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import api, { getScanSummary } from '../../services/api';
+import api from '../../services/api';
 import bluetoothScale from '../../utils/bluetooth';
 import wifiScale from '../../utils/wifi';
 import '../../styles/Scanner.css';
@@ -16,15 +16,19 @@ const Scanner = () => {
   const [wifiUrl, setWifiUrl] = useState('');
   const [wifiConnected, setWifiConnected] = useState(false);
   const [error, setError] = useState('');
-  const [scanSummary, setScanSummary] = useState(null);
-  const [productLogs, setProductLogs] = useState([]);
+  const [isNewProduct, setIsNewProduct] = useState(false);
+  const [partNoInput, setPartNoInput] = useState('');
   const scannerRef = useRef(null);
   const scannerContainerId = 'qr-reader';
 
   const isScanningRef = useRef(false);
 
-  const handleScan = useCallback(async (partNo) => {
+const handleScan = useCallback(async (partNo) => {
     if (isScanningRef.current) return;
+    const upperPartNo = (partNo || '').trim().toUpperCase();
+    if (!upperPartNo) return;
+
+    setPartNoInput(upperPartNo);
     isScanningRef.current = true;
     setLoading(true);
     setError('');
@@ -34,32 +38,34 @@ const Scanner = () => {
     setConnectionMode('manual');
     setBluetoothConnected(false);
     setWifiConnected(false);
-    setProductLogs([]);
     bluetoothScale.disconnect();
     wifiScale.disconnect();
 
     try {
-      const res = await api.get(`/demo-data/${partNo}`);
+      const res = await api.get(`/demo-data/${upperPartNo}`);
       setScanResult(res.data);
-
-      // Fetch logs for this specific product
-      try {
-        const logsRes = await api.get('/scan/history', { params: { partNo } });
-        setProductLogs(logsRes.data || []);
-      } catch (err) {
-        console.error('Failed to fetch product logs:', err);
-      }
+      setIsNewProduct(false);
     } catch (err) {
-      if (err.response?.data?.requiresDemoData) {
-        setError(`No baseline data for ${partNo}. Please ask admin to create demo data.`);
-      } else {
-        setError(err.response?.data?.message || 'Product not found');
+      // Backend returns 404 with { message, requiresDemoData: true }
+      // Allow demo creation for that case and stop treating it as a hard error.
+      if (err.response?.status === 404 && err.response?.data?.requiresDemoData) {
+        setScanResult({
+          partNo: upperPartNo,
+          partDescription: '',
+          unitWeight: '',
+          toleranceWeight: '',
+          totalCount: ''
+        });
+        setIsNewProduct(true);
+        return;
       }
+
+      setError(err.response?.data?.message || 'Product not found');
     } finally {
       setLoading(false);
       isScanningRef.current = false;
     }
-  }, [setLoading, setError, setValidationResult, setScanResult, setWeight, setConnectionMode, setBluetoothConnected, setWifiConnected]);
+  }, [setLoading, setError, setValidationResult, setScanResult, setWeight, setConnectionMode, setBluetoothConnected, setWifiConnected, setPartNoInput]);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -90,7 +96,27 @@ const Scanner = () => {
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
-          handleScan(decodedText);
+          const rawText = (decodedText || '').trim();
+          const upperRaw = rawText.toUpperCase();
+
+          // QR may contain a full URL like: https://Q.ME-QR.COM/I6CJM9PG
+          // Convert it to the actual Part No: I6CJM9PG
+          let extractedPartNo = upperRaw;
+          try {
+            if (upperRaw.includes('/')) {
+              extractedPartNo = upperRaw.substring(upperRaw.lastIndexOf('/') + 1);
+            }
+            // Remove query string if present
+            if (extractedPartNo.includes('?')) {
+              extractedPartNo = extractedPartNo.split('?')[0];
+            }
+            extractedPartNo = (extractedPartNo || '').trim();
+          } catch {
+            extractedPartNo = upperRaw.trim();
+          }
+
+          setPartNoInput(extractedPartNo);
+          handleScan(extractedPartNo);
         },
         () => {}
       );
@@ -103,16 +129,6 @@ const Scanner = () => {
 
   useEffect(() => {
     startScanner();
-
-    const fetchData = async () => {
-      try {
-        const summaryRes = await getScanSummary();
-        setScanSummary(summaryRes.data);
-      } catch (err) {
-        console.error('Failed to fetch scan summary:', err);
-      }
-    };
-    fetchData();
 
     return () => {
       stopScanner();
@@ -134,20 +150,6 @@ const Scanner = () => {
       setValidationResult(res.data);
       setScanResult(prev => ({ ...prev, remainingCount: res.data.remainingCount }));
 
-      // Refetch data after successful scan
-      try {
-        const summaryRes = await getScanSummary();
-        setScanSummary(summaryRes.data);
-      } catch (err) {
-        console.error('Failed to refetch scan summary:', err);
-      }
-      try {
-        const logsRes = await api.get('/scan/history', { params: { partNo: scanResult.partNo } });
-        setProductLogs(logsRes.data || []);
-      } catch (err) {
-        console.error('Failed to refetch product logs:', err);
-      }
-      
       // Also refetch scanResult to ensure remainingCount is updated
       try {
         const res = await api.get(`/demo-data/${scanResult.partNo}`);
@@ -212,9 +214,8 @@ const Scanner = () => {
 
   const handleManualPartNo = (e) => {
     e.preventDefault();
-    const partNo = e.target.partNo.value;
-    if (partNo) {
-      handleScan(partNo);
+    if (partNoInput) {
+      handleScan(partNoInput);
     }
   };
 
@@ -226,9 +227,36 @@ const Scanner = () => {
     setConnectionMode('manual');
     setBluetoothConnected(false);
     setWifiConnected(false);
-    setProductLogs([]);
+    setIsNewProduct(false);
+    setPartNoInput('');
     bluetoothScale.disconnect();
     wifiScale.disconnect();
+  };
+
+  const handleCreateDemo = async () => {
+    if (!scanResult.partDescription || !scanResult.unitWeight || scanResult.toleranceWeight === '' || !scanResult.totalCount) {
+      setError('Please fill all fields');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await api.post('/demo-data', {
+        partNo: scanResult.partNo,
+        partDescription: scanResult.partDescription,
+        unitWeight: parseFloat(scanResult.unitWeight),
+        toleranceWeight: parseFloat(scanResult.toleranceWeight),
+        totalCount: parseInt(scanResult.totalCount)
+      });
+      // Fetch the created demo data
+      const res = await api.get(`/demo-data/${scanResult.partNo}`);
+      setScanResult(res.data);
+      setIsNewProduct(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create demo data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -248,6 +276,8 @@ const Scanner = () => {
             <form onSubmit={handleManualPartNo} className="quantix-scanner__form">
               <input
                 name="partNo"
+                value={partNoInput}
+                onChange={(e) => setPartNoInput(e.target.value.toUpperCase())}
                 placeholder="Enter Part No"
                 className="quantix-scanner__input"
               />
@@ -273,7 +303,7 @@ const Scanner = () => {
           <div className="quantix-scanner__scan-grid-main">
             <div className="quantix-scanner__card">
               <div className="quantix-scanner__product-header">
-                <h3 className="quantix-scanner__product-title">Product Details</h3>
+                <h3 className="quantix-scanner__product-title">{isNewProduct ? 'Create Demo Data' : 'Product Details'}</h3>
                 <button onClick={resetScan} className="quantix-scanner__button--small-gray">
                   New Scan
                 </button>
@@ -285,100 +315,168 @@ const Scanner = () => {
                   <th>Part No</th>
                   <th>Description</th>
                   <th>Unit Weight</th>
-                  <th>Weight</th>
-                  <th>Remaining</th>
+                  <th>Tolerance Weight</th>
+                  {isNewProduct && <th>Total Count</th>}
+                  {!isNewProduct && <th>Total Ideal Product Count</th>}
+                  {!isNewProduct && <th>Weight</th>}
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td className="quantix-scanner__part-no">{scanResult.partNo}</td>
-                  <td>{scanResult.partDescription}</td>
-                  <td>{scanResult.unitWeight.toFixed(3)} kg</td>
-                  <td className={weight ? 'quantix-scanner__weight-value' : 'quantix-scanner__weight-placeholder'}>
-                    {weight ? `${parseFloat(weight).toFixed(2)} kg` : '-'}
+                  <td>
+                    {isNewProduct ? (
+                      <input
+                        type="text"
+                        value={scanResult.partDescription}
+                        onChange={(e) => setScanResult({ ...scanResult, partDescription: e.target.value })}
+                        placeholder="Enter description"
+                        className="quantix-scanner__input"
+                      />
+                    ) : (
+                      scanResult.partDescription
+                    )}
                   </td>
-                  <td className="quantix-scanner__remaining">
-                    {scanResult.remainingCount} / {scanResult.totalCount}
+                  <td>
+                    {isNewProduct ? (
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={scanResult.unitWeight}
+                        onChange={(e) => setScanResult({ ...scanResult, unitWeight: e.target.value })}
+                        placeholder="kg"
+                        className="quantix-scanner__input"
+                      />
+                    ) : (
+                      `${parseFloat(scanResult.unitWeight).toFixed(3)} kg`
+                    )}
                   </td>
+                  <td>
+                    {isNewProduct ? (
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={scanResult.toleranceWeight}
+                        onChange={(e) => setScanResult({ ...scanResult, toleranceWeight: e.target.value })}
+                        placeholder="kg"
+                        className="quantix-scanner__input"
+                        min="0"
+                      />
+                    ) : (
+                      `${parseFloat(scanResult.toleranceWeight ?? 0).toFixed(3)} kg`
+                    )}
+                  </td>
+                  {isNewProduct && (
+                    <td>
+                      <input
+                        type="number"
+                        value={scanResult.totalCount}
+                        onChange={(e) => setScanResult({ ...scanResult, totalCount: e.target.value })}
+                        placeholder="Count"
+                        className="quantix-scanner__input"
+                        min="1"
+                      />
+                    </td>
+                  )}
+                  {!isNewProduct && (
+                    <td>{scanResult.totalCount}</td>
+                  )}
+                  {!isNewProduct && (
+                    <td className={weight ? 'quantix-scanner__weight-value' : 'quantix-scanner__weight-placeholder'}>
+                      {weight ? `${parseFloat(weight).toFixed(2)} kg` : '-'}
+                    </td>
+                  )}
                 </tr>
               </tbody>
             </table>
           </div>
 
           <div className="quantix-scanner__card">
-            <h3 className="quantix-scanner__section-title">Weight Input</h3>
-            <div className="quantix-scanner__mode-buttons">
-              <button onClick={() => handleModeChange('manual')} className={`quantix-scanner__mode-btn ${connectionMode === 'manual' ? 'quantix-scanner__mode-btn--active' : ''}`}>Manual</button>
-              <button onClick={() => handleModeChange('bluetooth')} className={`quantix-scanner__mode-btn ${connectionMode === 'bluetooth' ? 'quantix-scanner__mode-btn--active' : ''}`}>Bluetooth</button>
-              <button onClick={() => handleModeChange('wifi')} className={`quantix-scanner__mode-btn ${connectionMode === 'wifi' ? 'quantix-scanner__mode-btn--active' : ''}`}>WiFi</button>
-            </div>
+            {isNewProduct ? (
+              <button
+                onClick={handleCreateDemo}
+                disabled={loading}
+                className="quantix-scanner__button--validate"
+              >
+                {loading ? 'Creating...' : 'Create Demo Data'}
+              </button>
+            ) : (
+              <>
+                <h3 className="quantix-scanner__section-title">Weight Input</h3>
+                <div className="quantix-scanner__mode-buttons">
+                  <button onClick={() => handleModeChange('manual')} className={`quantix-scanner__mode-btn ${connectionMode === 'manual' ? 'quantix-scanner__mode-btn--active' : ''}`}>Manual</button>
+                  <button onClick={() => handleModeChange('bluetooth')} className={`quantix-scanner__mode-btn ${connectionMode === 'bluetooth' ? 'quantix-scanner__mode-btn--active' : ''}`}>Bluetooth</button>
+                  <button onClick={() => handleModeChange('wifi')} className={`quantix-scanner__mode-btn ${connectionMode === 'wifi' ? 'quantix-scanner__mode-btn--active' : ''}`}>WiFi</button>
+                </div>
 
-            {connectionMode === 'manual' && (
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Weight in kg"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="quantix-scanner__input quantix-scanner__input--full"
-              />
-            )}
+                {connectionMode === 'manual' && (
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Weight in kg"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="quantix-scanner__input quantix-scanner__input--full"
+                  />
+                )}
 
-            {connectionMode === 'bluetooth' && (
-              <div className="quantix-scanner__input-row">
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Weight in kg"
-                  value={weight}
-                  readOnly
-                  className="quantix-scanner__input quantix-scanner__input--readonly"
-                />
+                {connectionMode === 'bluetooth' && (
+                  <div className="quantix-scanner__input-row">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Weight in kg"
+                      value={weight}
+                      readOnly
+                      className="quantix-scanner__input quantix-scanner__input--readonly"
+                    />
+                    <button
+                      onClick={handleBluetoothConnect}
+                      className={`quantix-scanner__connect-btn ${bluetoothConnected ? 'quantix-scanner__connect-btn--bt-connected' : 'quantix-scanner__connect-btn--bt'}`}
+                    >
+                      {bluetoothConnected ? 'BT Connected' : 'Connect BT'}
+                    </button>
+                  </div>
+                )}
+
+                {connectionMode === 'wifi' && (
+                  <div className="quantix-scanner__input-row quantix-scanner__input-row--wrap">
+                    <input
+                      type="url"
+                      placeholder="http://192.168.1.100:8080/weight"
+                      value={wifiUrl}
+                      onChange={(e) => setWifiUrl(e.target.value)}
+                      className="quantix-scanner__input"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Weight in kg"
+                      value={weight}
+                      readOnly
+                      className="quantix-scanner__input quantix-scanner__input--readonly"
+                    />
+                    <button
+                      onClick={handleWifiConnect}
+                      className={`quantix-scanner__connect-btn ${wifiConnected ? 'quantix-scanner__connect-btn--wifi-connected' : 'quantix-scanner__connect-btn--wifi'}`}
+                    >
+                      {wifiConnected ? 'WiFi Connected' : 'Connect WiFi'}
+                    </button>
+                  </div>
+                )}
+
                 <button
-                  onClick={handleBluetoothConnect}
-                  className={`quantix-scanner__connect-btn ${bluetoothConnected ? 'quantix-scanner__connect-btn--bt-connected' : 'quantix-scanner__connect-btn--bt'}`}
+                  onClick={handleValidate}
+                  disabled={!weight || loading}
+                  className="quantix-scanner__button--validate"
                 >
-                  {bluetoothConnected ? 'BT Connected' : 'Connect BT'}
+                  {loading ? 'Validating...' : 'Validate Weight'}
                 </button>
-              </div>
+              </>
             )}
-
-            {connectionMode === 'wifi' && (
-              <div className="quantix-scanner__input-row quantix-scanner__input-row--wrap">
-                <input
-                  type="url"
-                  placeholder="http://192.168.1.100:8080/weight"
-                  value={wifiUrl}
-                  onChange={(e) => setWifiUrl(e.target.value)}
-                  className="quantix-scanner__input"
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Weight in kg"
-                  value={weight}
-                  readOnly
-                  className="quantix-scanner__input quantix-scanner__input--readonly"
-                />
-                <button
-                  onClick={handleWifiConnect}
-                  className={`quantix-scanner__connect-btn ${wifiConnected ? 'quantix-scanner__connect-btn--wifi-connected' : 'quantix-scanner__connect-btn--wifi'}`}
-                >
-                  {wifiConnected ? 'WiFi Connected' : 'Connect WiFi'}
-                </button>
-              </div>
-            )}
-
-            <button
-              onClick={handleValidate}
-              disabled={!weight || loading}
-              className="quantix-scanner__button--validate"
-            >
-              {loading ? 'Validating...' : 'Validate Weight'}
-            </button>
           </div>
 
-          {validationResult && (
+          {validationResult && !isNewProduct && (
             <div className={`quantix-scanner__card ${validationResult.status === 'match' ? 'quantix-scanner__card--success' : 'quantix-scanner__card--fail'}`}>
               <div className="quantix-scanner__validation-icon">
                 {validationResult.status === 'match' ? '✅' : '❌'}
@@ -397,49 +495,15 @@ const Scanner = () => {
                 Expected: {validationResult.expectedWeight} kg
               </div>
               <div className="quantix-scanner__validation-detail">
-                Expected Count: {validationResult.expectedCount}
+                Tolerance: {validationResult.toleranceWeight} kg
               </div>
               <div className="quantix-scanner__validation-detail">
-                Remaining: {validationResult.remainingCount} / {scanResult.totalCount}
+                Expected Count: {validationResult.expectedCount}
               </div>
             </div>
           )}
           </div>
 
-          <aside className="quantix-scanner__scan-grid-side">
-            
-            {productLogs.length > 0 && (
-              <div className="quantix-scanner__card quantix-scanner__card--logs">
-                <h3 className="quantix-scanner__section-title">Scan History for {scanResult.partNo}</h3>
-                <table className="quantix-scanner__table quantix-scanner__logs-table">
-                  <thead>
-                    <tr>
-                      <th>Status</th>
-                      <th>Measured Weight</th>
-                      <th>Expected Weight</th>
-                      <th>Expected Count</th>
-                      <th>Scanned By</th>
-                      <th>Date & Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {productLogs.map((log) => (
-                      <tr key={log._id} className={`quantix-scanner__log-row quantix-scanner__log-row--${log.status}`}>
-                        <td className={`quantix-scanner__status-cell quantix-scanner__status--${log.status}`}>
-                          {log.status.toUpperCase()}
-                        </td>
-                        <td>{log.measuredWeight ? log.measuredWeight.toFixed(2) : log.measuredWeight} kg</td>
-                        <td>{log.expectedWeight ? log.expectedWeight.toFixed(2) : log.expectedWeight} kg</td>
-                        <td>{log.expectedCount}</td>
-                        <td>{log.scannedByName || 'N/A'}</td>
-                        <td>{new Date(log.createdAt).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </aside>
         </div>
       )}
    </div>

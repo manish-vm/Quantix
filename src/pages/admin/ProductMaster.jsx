@@ -8,10 +8,15 @@ const ProductMaster = () => {
   const [demoDataList, setDemoDataList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ partNo: '', description: '' });
-  const [demoForm, setDemoForm] = useState({ partNo: '', overallWeight: '', totalCount: '' });
+  const [demoForm, setDemoForm] = useState({ partNo: '', unitWeight: '', toleranceWeight: '', totalCount: '' });
   const [message, setMessage] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [editDescription, setEditDescription] = useState('');
+  const [editForm, setEditForm] = useState({
+    description: '',
+    unitWeight: '',
+    toleranceWeight: '',
+    totalCount: ''
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchPartNo, setSearchPartNo] = useState('');
@@ -118,10 +123,11 @@ const ProductMaster = () => {
     try {
       await api.post('/demo-data', {
         partNo: demoForm.partNo,
-        overallWeight: parseFloat(demoForm.overallWeight),
+        unitWeight: parseFloat(demoForm.unitWeight),
+        toleranceWeight: parseFloat(demoForm.toleranceWeight),
         totalCount: parseInt(demoForm.totalCount)
       });
-      setDemoForm({ partNo: '', overallWeight: '', totalCount: '' });
+      setDemoForm({ partNo: '', unitWeight: '', toleranceWeight: '', totalCount: '' });
       setMessage('Demo data created successfully');
       fetchTableData(currentPage);
       fetchDemoData();
@@ -150,23 +156,66 @@ const ProductMaster = () => {
   };
 
   const handleEdit = (product) => {
+    const demo = getDemoForProduct(product.partNo);
     setEditingId(product._id);
-    setEditDescription(product.description);
+    setEditForm({
+      description: product.description,
+      unitWeight: demo?.unitWeight ?? '',
+      toleranceWeight: demo?.toleranceWeight ?? '',
+      totalCount: demo?.totalCount ?? ''
+    });
   };
 
-  const handleSaveEdit = async (id) => {
+  const handleSaveEdit = async (product) => {
     try {
-      const res = await api.put(`/products/${id}`, { description: editDescription });
+      if (!editForm.description.trim()) {
+        setMessage('Description is required');
+        return;
+      }
+
+      const demoFields = [editForm.unitWeight, editForm.toleranceWeight, editForm.totalCount];
+      const shouldSaveDemo = demoFields.some(value => value !== '');
+      const hasCompleteDemo = demoFields.every(value => value !== '');
+
+      if (shouldSaveDemo && !hasCompleteDemo) {
+        setMessage('Please fill unit weight, tolerance weight, and total count to update demo data');
+        return;
+      }
+
+      const res = await api.put(`/products/${product._id}`, { description: editForm.description });
       const updatedProduct = res.data;
+
+      let updatedDemo = null;
+      if (shouldSaveDemo) {
+        const demoRes = await api.post('/demo-data', {
+          partNo: product.partNo,
+          partDescription: editForm.description,
+          unitWeight: parseFloat(editForm.unitWeight),
+          toleranceWeight: parseFloat(editForm.toleranceWeight),
+          totalCount: parseInt(editForm.totalCount, 10)
+        });
+        updatedDemo = demoRes.data;
+      }
+
       setMessage('Product updated successfully');
       setEditingId(null);
-      setProducts(prev => prev.map(p => p._id === id ? updatedProduct : p));
-      setAllProducts(prev => prev.map(p => p._id === id ? updatedProduct : p));
-      setDemoDataList(prev => prev.map(d =>
-        d.partNo === updatedProduct.partNo
-          ? { ...d, partDescription: updatedProduct.description }
-          : d
-      ));
+      setEditForm({ description: '', unitWeight: '', toleranceWeight: '', totalCount: '' });
+      setProducts(prev => prev.map(p => p._id === product._id ? updatedProduct : p));
+      setAllProducts(prev => prev.map(p => p._id === product._id ? updatedProduct : p));
+      setDemoDataList(prev => {
+        if (updatedDemo) {
+          const exists = prev.some(d => d.partNo === updatedDemo.partNo);
+          return exists
+            ? prev.map(d => d.partNo === updatedDemo.partNo ? updatedDemo : d)
+            : [updatedDemo, ...prev];
+        }
+
+        return prev.map(d =>
+          d.partNo === updatedProduct.partNo
+            ? { ...d, partDescription: updatedProduct.description }
+            : d
+        );
+      });
     } catch (err) {
       setMessage(err.response?.data?.message || 'Error updating product');
     }
@@ -174,7 +223,7 @@ const ProductMaster = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditDescription('');
+    setEditForm({ description: '', unitWeight: '', toleranceWeight: '', totalCount: '' });
   };
 
   const handleDelete = async (id) => {
@@ -289,11 +338,21 @@ const ProductMaster = () => {
             </select>
             <input
               type="number"
-              step="0.01"
-              placeholder="Overall Weight (kg)"
-              value={demoForm.overallWeight}
-              onChange={(e) => setDemoForm({ ...demoForm, overallWeight: e.target.value })}
+              step="0.001"
+              placeholder="Unit Weight (kg)"
+              value={demoForm.unitWeight}
+              onChange={(e) => setDemoForm({ ...demoForm, unitWeight: e.target.value })}
               className="quantix-product-master__input"
+              required
+            />
+            <input
+              type="number"
+              step="0.001"
+              placeholder="Tolerance Weight (kg)"
+              value={demoForm.toleranceWeight}
+              onChange={(e) => setDemoForm({ ...demoForm, toleranceWeight: e.target.value })}
+              className="quantix-product-master__input"
+              min="0"
               required
             />
             <input
@@ -380,19 +439,20 @@ const ProductMaster = () => {
                 <th>Part No</th>
                 <th>Description</th>
                 <th>Unit Weight</th>
+                <th>Tolerance Weight</th>
+                <th>Total Count</th>
                 <th>Overall Weight</th>
-                <th>Remaining</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="quantix-product-master__empty">Loading...</td>
+                  <td colSpan="7" className="quantix-product-master__empty">Loading...</td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="quantix-product-master__empty">No products found</td>
+                  <td colSpan="7" className="quantix-product-master__empty">No products found</td>
                 </tr>
               ) : (
                 products.map((product) => {
@@ -404,8 +464,8 @@ const ProductMaster = () => {
                       <td>
                         {isEditing ? (
                           <input
-                            value={editDescription}
-                            onChange={(e) => setEditDescription(e.target.value)}
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                             className="quantix-product-master__input quantix-product-master__input--inline"
                           />
                         ) : (
@@ -413,24 +473,58 @@ const ProductMaster = () => {
                         )}
                       </td>
                       <td>
-                        {demo ? `${demo.unitWeight.toFixed(3)} kg` : '-'}
-                      </td>
-                      <td>
-                        {demo ? `${demo.overallWeight} kg` : '-'}
-                      </td>
-                      <td>
-                        {demo ? (
-                          <span className={`quantix-product-master__badge ${demo.remainingCount > 0 ? 'quantix-product-master__badge--success' : 'quantix-product-master__badge--error'}`}>
-                            {demo.remainingCount} / {demo.totalCount}
-                          </span>
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={editForm.unitWeight}
+                            onChange={(e) => setEditForm({ ...editForm, unitWeight: e.target.value })}
+                            placeholder="kg"
+                            className="quantix-product-master__input quantix-product-master__input--inline"
+                          />
                         ) : (
-                          <span className="quantix-product-master__no-baseline">No baseline</span>
+                          demo ? `${demo.unitWeight.toFixed(3)} kg` : '-'
                         )}
                       </td>
                       <td>
                         {isEditing ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={editForm.toleranceWeight}
+                            onChange={(e) => setEditForm({ ...editForm, toleranceWeight: e.target.value })}
+                            placeholder="kg"
+                            className="quantix-product-master__input quantix-product-master__input--inline"
+                          />
+                        ) : (
+                          demo ? `${Number(demo.toleranceWeight ?? 0).toFixed(3)} kg` : '-'
+                        )}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="1"
+                            value={editForm.totalCount}
+                            onChange={(e) => setEditForm({ ...editForm, totalCount: e.target.value })}
+                            placeholder="Count"
+                            className="quantix-product-master__input quantix-product-master__input--inline"
+                          />
+                        ) : (
+                          demo ? demo.totalCount : '-'
+                        )}
+                      </td>
+                      <td>
+                        {isEditing && editForm.unitWeight && editForm.totalCount
+                          ? `${(parseFloat(editForm.unitWeight) * parseInt(editForm.totalCount, 10)).toFixed(3)} kg`
+                          : demo ? `${Number(demo.overallWeight).toFixed(3)} kg` : '-'}
+                      </td>
+                      <td>
+                        {isEditing ? (
                           <>
-                            <button onClick={() => handleSaveEdit(product._id)} className="quantix-product-master__action-btn quantix-product-master__action-btn--save">Save</button>
+                            <button onClick={() => handleSaveEdit(product)} className="quantix-product-master__action-btn quantix-product-master__action-btn--save">Save</button>
                             <button onClick={handleCancelEdit} className="quantix-product-master__action-btn quantix-product-master__action-btn--cancel">Cancel</button>
                           </>
                         ) : (

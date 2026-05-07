@@ -61,7 +61,8 @@
   text-align: left;
   padding: 12px;
   font-size: 14px;
-  color: #666;
+  color: #f6f6f6;
+  background-color: #2e8edd;
 }
 
 .quantix-reports__table td {
@@ -122,8 +123,19 @@
   border: 1px solid #ffccc7;
 }
 
+.quantix-reports__status-cell--good {
+  color: #52c41a; /* green */
+  font-weight: 700;
+}
+
+.quantix-reports__status-cell--bad {
+  color: #ff4d4f; /* red */
+  font-weight: 700;
+}
+
+
 .quantix-reports__table-wrapper {
-  overflow-x: auto;
+  overflow: auto;
   max-width: 100%;
 }
 

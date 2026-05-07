@@ -1,0 +1,60 @@
+.quantix-profile {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.quantix-profile__title {
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.quantix-profile__error {
+  background: #fff2f0;
+  color: #d4380d;
+  border: 1px solid #ffccc7;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.quantix-profile__form {
+  display: grid;
+  gap: 14px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.quantix-profile__label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  color: #333;
+}
+
+.quantix-profile__input {
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.quantix-profile__save-btn {
+  justify-self: start;
+  padding: 10px 18px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.quantix-profile__save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

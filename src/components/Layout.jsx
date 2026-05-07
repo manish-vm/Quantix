@@ -25,7 +25,20 @@ const Layout = () => {
               </>
             )}
             {user?.role === 'employee' && (
-              <Link to="/" className={`quantix-layout__nav-link ${location.pathname === '/' ? 'quantix-layout__nav-link--active' : ''}`}>Scanner</Link>
+              <>
+                <Link
+                  to="/"
+                  className={`quantix-layout__nav-link ${location.pathname === '/' ? 'quantix-layout__nav-link--active' : ''}`}
+                >
+                  Scanner
+                </Link>
+                <Link
+                  to="/history"
+                  className={`quantix-layout__nav-link ${location.pathname === '/history' ? 'quantix-layout__nav-link--active' : ''}`}
+                >
+                  Scan Log History
+                </Link>
+              </>
             )}
           </div>
           <span className="quantix-layout__user-name">

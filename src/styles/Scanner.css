@@ -186,11 +186,6 @@
   font-weight: bold;
 }
 
-.quantix-scanner__remaining {
-  color: #52c41a;
-  font-weight: bold;
-}
-
 .quantix-scanner__mode-buttons {
   display: flex;
   gap: 8px;

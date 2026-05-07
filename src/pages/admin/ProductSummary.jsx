@@ -43,9 +43,9 @@ const ProductSummary = () => {
               <th>Part No</th>
               <th>Part Description</th>
               <th>Unit Weight</th>
+              <th>Tolerance Weight</th>
               <th>Overall Weight</th>
               <th>Total Ideal Product Count</th>
-              <th>Remaining Count</th>
             </tr>
           </thead>
           <tbody>
@@ -54,9 +54,9 @@ const ProductSummary = () => {
                 <td className="quantix-reports__part-no">{item.partNo}</td>
                 <td>{item.description}</td>
                 <td>{formatWeight(item.unitWeight)}</td>
+                <td>{formatWeight(item.toleranceWeight)}</td>
                 <td>{formatWeight(item.overallWeight)}</td>
                 <td>{formatCount(item.totalIdealProductCount)}</td>
-                <td>{formatCount(item.remainingCount)}</td>
               </tr>
             ))}
             {productReport.length === 0 && (

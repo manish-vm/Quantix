@@ -118,6 +118,7 @@
   color: #666;
   font-size: 14px;
   animation: fadeSlideIn 0.6s ease-out both;
+  text-decoration: none;
 }
 
 @keyframes fadeSlideIn {

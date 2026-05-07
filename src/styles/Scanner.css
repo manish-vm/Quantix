@@ -5,7 +5,7 @@
 }
 
 .quantix-scanner__scan-grid {
-  display: grid;
+  display: block;
   grid-template-columns: 1.55fr 0.95fr;
   gap: 18px;
   align-items: start;

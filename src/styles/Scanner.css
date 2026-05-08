@@ -1,5 +1,11 @@
 /* Existing styles are preserved; only add new classes needed for live weight input feedback. */
 
+.quantix-scanner__title,
+.quantix-scanner__section-title,
+.quantix-scanner__product-title {
+  caret-color: transparent;
+}
+
 .quantix-scanner__weight-input-wrapper {
   position: relative;
   width: 100%;

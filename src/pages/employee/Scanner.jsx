@@ -351,7 +351,15 @@ const safeStopScanner = useCallback(async () => {
 }, [startScanner, safeStopScanner]);
   return (
     <>
-    <div className="quantix-scanner">
+    <div
+      className="quantix-scanner"
+      onMouseDown={(e) => {
+        // Prevent an invisible html5-qrcode input from keeping focus when user clicks on blank page/body.
+        if (e.target === e.currentTarget) {
+          document.activeElement?.blur?.();
+        }
+      }}
+    >
       <h1 className="quantix-scanner__title">Product Scanner</h1>
 
       {!scanResult && (

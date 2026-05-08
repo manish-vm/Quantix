@@ -1,40 +1,53 @@
-/* Scanner Page */
-.quantix-scanner {
-  max-width: 1100px;
-  margin: 0 auto;
+/* Existing styles are preserved; only add new classes needed for live weight input feedback. */
+
+.quantix-scanner__weight-input-wrapper {
+  position: relative;
+  width: 100%;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
 }
 
-.quantix-scanner__scan-grid {
-  display: block;
-  grid-template-columns: 1.55fr 0.95fr;
-  gap: 18px;
-  align-items: start;
+.quantix-scanner__weight-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  padding: 12px;
+  font-size: 14px;
+  outline: none; /* prevent focus ring/dark outline */
 }
 
-.quantix-scanner__scan-grid-main,
-.quantix-scanner__scan-grid-side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.quantix-scanner__weight-input:focus {
+  outline: none;
+  box-shadow: none;
 }
 
-.quantix-scanner__title {
-  margin-bottom: 24px;
-  font-size: 24px;
-  text-align: center;
+
+.quantix-scanner__weight-input-wrapper--matched {
+  border: 2px solid #22c55e; /* green */
 }
 
-.quantix-scanner__card {
-  background: #fff;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 16px;
+.quantix-scanner__weight-input-wrapper--excess {
+  border: 2px solid #facc15; /* yellow */
 }
 
-.quantix-scanner__card--center {
-  text-align: center;
+.quantix-scanner__weight-input-wrapper--short {
+  border: 2px solid #ef4444; /* red */
 }
+
+.quantix-scanner__weight-input-adornment {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 800;
+  color: #000000;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
 
 .quantix-scanner__card--error {
   background: #fff2f0;
@@ -415,4 +428,3 @@
     flex-wrap: wrap;
   }
 }
-

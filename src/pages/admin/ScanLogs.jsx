@@ -114,8 +114,8 @@ const ScanLogs = () => {
                 <th>Tolerance Weight</th>
                 <th>Overall Weight</th>
                 <th>Received Weight</th>
-                <th>Underweight of</th>
-                <th>Overweight of</th>
+                <th>Short of</th>
+                <th>Excess of</th>
                 <th>Total Ideal Product Count</th>
                 <th>Validated Product Count</th>
                 <th>Product Delay</th>
@@ -134,8 +134,8 @@ const ScanLogs = () => {
                   <td>{formatWeight(log.toleranceWeight)}</td>
                   <td>{formatWeight(log.overallWeight)}</td>
                   <td>{formatWeight(log.receivedWeight)}</td>
-                  <td>{formatWeight(log.underweight)}</td>
-                  <td>{formatWeight(log.overweight)}</td>
+                  <td>{formatWeight(log.short)}</td>
+                  <td>{formatWeight(log.excess)}</td>
                   <td>{formatCount(log.totalIdealProductCount)}</td>
                   <td>{formatCount(log.basedOnReceivedWeightProductCount)}</td>
                   <td>{formatCount(log.productDelay)}</td>
@@ -145,9 +145,9 @@ const ScanLogs = () => {
                       const getStatusDisplay = () => {
                         if (log.status === 'match') return { text: 'Match', className: 'quantix-reports__status-badge--match' };
                         if (log.measuredWeight > log.expectedWeight) {
-                          return { text: 'Overweight', className: 'quantix-reports__status-badge--mismatch' };
+                          return { text: 'Excess', className: 'quantix-reports__status-badge--excess' };
                         }
-                        return { text: 'Underweight', className: 'quantix-reports__status-badge--mismatch' };
+                        return { text: 'Short', className: 'quantix-reports__status-badge--short' };
                       };
                       const statusDisplay = getStatusDisplay();
                       return (

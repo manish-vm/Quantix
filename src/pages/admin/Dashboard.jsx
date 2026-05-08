@@ -162,8 +162,8 @@ const Dashboard = () => {
                   {(() => {
                     const getStatusDisplay = () => {
                       if (scan.status === 'match') return { text: 'Match', className: 'quantix-dashboard__badge--match' };
-                      if (scan.measuredWeight > scan.expectedWeight) return { text: 'Overweight', className: 'quantix-dashboard__badge--mismatch' };
-                      return { text: 'Underweight', className: 'quantix-dashboard__badge--mismatch' };
+                      if (scan.measuredWeight > scan.expectedWeight) return { text: 'Excess', className: 'quantix-dashboard__badge--excess' };
+                      return { text: 'Short', className: 'quantix-dashboard__badge--short' };
                     };
                     const statusDisplay = getStatusDisplay();
                     return (

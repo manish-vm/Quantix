@@ -67,80 +67,143 @@ const handleScan = useCallback(async (partNo) => {
     }
   }, [setLoading, setError, setValidationResult, setScanResult, setWeight, setConnectionMode, setBluetoothConnected, setWifiConnected, setPartNoInput]);
 
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-      } catch (e) {
-        console.error('Stop scanner error:', e);
-      }
+const safeStopScanner = useCallback(async () => {
+  if (!scannerRef.current) return;
+
+  try {
+    await scannerRef.current.stop();
+  } catch (e) {
+    const msg = e?.message || '';
+    if (!msg.includes('scanner is not running or paused')) {
+      console.error('Stop scanner error:', e);
     }
-  }, []);
+  }
 
-  const startScanner = useCallback(async () => {
-    try {
-      scannerRef.current = new Html5Qrcode(scannerContainerId, {
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-          Html5QrcodeSupportedFormats.CODABAR,
-          Html5QrcodeSupportedFormats.ITF,
-        ]
-      });
-      await scannerRef.current.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          const rawText = (decodedText || '').trim();
-          const upperRaw = rawText.toUpperCase();
+  try {
+    await scannerRef.current.clear();
+  } catch (e) {
+    console.error('Clear scanner error:', e);
+  }
 
-          // QR may contain a full URL like: https://Q.ME-QR.COM/I6CJM9PG
-          // Convert it to the actual Part No: I6CJM9PG
-          let extractedPartNo = upperRaw;
-          try {
-            if (upperRaw.includes('/')) {
-              extractedPartNo = upperRaw.substring(upperRaw.lastIndexOf('/') + 1);
-            }
-            // Remove query string if present
-            if (extractedPartNo.includes('?')) {
-              extractedPartNo = extractedPartNo.split('?')[0];
-            }
-            extractedPartNo = (extractedPartNo || '').trim();
-          } catch {
-            extractedPartNo = upperRaw.trim();
+  scannerRef.current = null;
+  setScannerReady(false);
+}, []);
+
+
+ const startScanner = useCallback(async () => {
+  try {
+    // Prevent duplicate initialization
+    if (scannerRef.current) {
+      return;
+    }
+
+    const el = document.getElementById(scannerContainerId);
+    if (el) {
+      el.innerHTML = '';
+    }
+
+    const scanner = new Html5Qrcode(scannerContainerId, {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODABAR,
+        Html5QrcodeSupportedFormats.ITF,
+      ]
+    });
+
+    scannerRef.current = scanner;
+
+    await scanner.start(
+      { facingMode: 'environment' },
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 }
+      },
+      async (decodedText) => {
+        const rawText = (decodedText || '').trim();
+        const upperRaw = rawText.toUpperCase();
+
+        let extractedPartNo = upperRaw;
+
+        try {
+          if (upperRaw.includes('/')) {
+            extractedPartNo =
+              upperRaw.substring(upperRaw.lastIndexOf('/') + 1);
           }
 
-          setPartNoInput(extractedPartNo);
-          handleScan(extractedPartNo);
-        },
-        () => {}
-      );
-      setScannerReady(true);
-    } catch (err) {
-      console.error('Scanner init error:', err);
-      setError('Camera access denied or not available. You can enter Part No manually below.');
-    }
-  }, [handleScan]);
+          if (extractedPartNo.includes('?')) {
+            extractedPartNo = extractedPartNo.split('?')[0];
+          }
 
-  useEffect(() => {
-    startScanner();
+          extractedPartNo = extractedPartNo.trim();
+        } catch {
+          extractedPartNo = upperRaw.trim();
+        }
 
-    return () => {
-      stopScanner();
-      bluetoothScale.disconnect();
-      wifiScale.disconnect();
-    };
-  }, [startScanner, stopScanner]);
+        // STOP CAMERA AFTER SUCCESSFUL SCAN
+        await safeStopScanner();
+
+        setPartNoInput(extractedPartNo);
+        handleScan(extractedPartNo);
+      },
+      () => {}
+    );
+
+    setScannerReady(true);
+  } catch (err) {
+    console.error('Scanner init error:', err);
+
+    setError(
+      'Camera access denied or not available. You can enter Part No manually below.'
+    );
+  }
+}, [handleScan, safeStopScanner]);
+
+
+
+
+  const parseWeightNumber = (val) => {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const getLiveWeightStatus = () => {
+    if (!scanResult) return null;
+    // Backend uses unitWeight/toleranceWeight on demo-data response.
+    // Some responses may also include expectedWeight; support both.
+    const expectedValue = scanResult.expectedWeight ?? scanResult.unitWeight;
+    const expected = parseWeightNumber(expectedValue);
+    const measured = parseWeightNumber(weight);
+    if (expected === null || measured === null) return null;
+
+    const toleranceRaw = scanResult.toleranceWeight ?? 0;
+    const tolerance = parseWeightNumber(toleranceRaw);
+
+    const safeTolerance = tolerance === null ? 0 : tolerance;
+
+    const diff = measured - expected;
+
+    const absDiff = Math.abs(diff);
+
+    if (absDiff <= safeTolerance) return { kind: 'match', displayDiff: 0 };
+
+    if (diff > 0) return { kind: 'excess', displayDiff: diff };
+    return { kind: 'short', displayDiff: diff };
+  };
 
   const handleValidate = async () => {
     if (!scanResult || !weight) return;
     setLoading(true);
     setError('');
+
+    // Snapshot live validation to keep UI in sync.
+    // (Used to show border + +/- adornment before validate completes.)
+
 
     try {
       const res = await api.post('/scan', {
@@ -212,27 +275,45 @@ const handleScan = useCallback(async (partNo) => {
     }
   };
 
-  const handleManualPartNo = (e) => {
-    e.preventDefault();
-    if (partNoInput) {
-      handleScan(partNoInput);
-    }
-  };
+ const handleManualPartNo = async (e) => {
+  e.preventDefault();
 
-  const resetScan = () => {
-    setScanResult(null);
-    setValidationResult(null);
-    setWeight('');
-    setError('');
-    setConnectionMode('manual');
-    setBluetoothConnected(false);
-    setWifiConnected(false);
-    setIsNewProduct(false);
-    setPartNoInput('');
-    bluetoothScale.disconnect();
-    wifiScale.disconnect();
-  };
+  if (partNoInput) {
+    await safeStopScanner();
+    handleScan(partNoInput);
+  }
+};
 
+ const resetScan = async () => {
+  setScanResult(null);
+  setValidationResult(null);
+  setWeight('');
+  setError('');
+  setConnectionMode('manual');
+  setBluetoothConnected(false);
+  setWifiConnected(false);
+  setIsNewProduct(false);
+  setPartNoInput('');
+
+  bluetoothScale.disconnect();
+  wifiScale.disconnect();
+
+  isScanningRef.current = false;
+
+  // Stop existing camera
+  await safeStopScanner();
+
+  // Clear DOM container
+  const el = document.getElementById(scannerContainerId);
+  if (el) {
+    el.innerHTML = '';
+  }
+
+  // Small delay ensures DOM is ready
+  setTimeout(() => {
+    startScanner();
+  }, 300);
+};
   const handleCreateDemo = async () => {
     if (!scanResult.partDescription || !scanResult.unitWeight || scanResult.toleranceWeight === '' || !scanResult.totalCount) {
       setError('Please fill all fields');
@@ -258,7 +339,16 @@ const handleScan = useCallback(async (partNo) => {
       setLoading(false);
     }
   };
+  useEffect(() => {
+  startScanner();
 
+  return () => {
+    safeStopScanner();
+
+    bluetoothScale.disconnect();
+    wifiScale.disconnect();
+  };
+}, [startScanner, safeStopScanner]);
   return (
     <>
     <div className="quantix-scanner">
@@ -409,16 +499,37 @@ const handleScan = useCallback(async (partNo) => {
                   <button onClick={() => handleModeChange('wifi')} className={`quantix-scanner__mode-btn ${connectionMode === 'wifi' ? 'quantix-scanner__mode-btn--active' : ''}`}>WiFi</button>
                 </div>
 
-                {connectionMode === 'manual' && (
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Weight in kg"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    className="quantix-scanner__input quantix-scanner__input--full"
-                  />
-                )}
+                {connectionMode === 'manual' && (() => {
+                  const live = getLiveWeightStatus();
+                  const kind = live?.kind;
+                  const diff = live?.displayDiff ?? 0;
+                  const diffText = live ? (diff === 0 ? '0' : `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`) : '';
+                  const inputBorderClass = kind === 'match'
+                    ? 'quantix-scanner__weight-input-wrapper--matched'
+                    : kind === 'excess'
+                      ? 'quantix-scanner__weight-input-wrapper--excess'
+                      : kind === 'short'
+                        ? 'quantix-scanner__weight-input-wrapper--short'
+                        : '';
+
+                  return (
+                    <div className={`quantix-scanner__weight-input-wrapper ${inputBorderClass}`}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Weight in kg"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        className="quantix-scanner__weight-input"
+                      />
+                      {live ? (
+                        <div className="quantix-scanner__weight-input-adornment">
+                          {diffText}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })()}
 
                 {connectionMode === 'bluetooth' && (
                   <div className="quantix-scanner__input-row">
@@ -464,7 +575,7 @@ const handleScan = useCallback(async (partNo) => {
                     </button>
                   </div>
                 )}
-
+                <br></br>
                 <button
                   onClick={handleValidate}
                   disabled={!weight || loading}
@@ -475,7 +586,7 @@ const handleScan = useCallback(async (partNo) => {
               </>
             )}
           </div>
-
+           <br></br>
           {validationResult && !isNewProduct && (
             <div className={`quantix-scanner__card ${validationResult.status === 'match' ? 'quantix-scanner__card--success' : 'quantix-scanner__card--fail'}`}>
               <div className="quantix-scanner__validation-icon">

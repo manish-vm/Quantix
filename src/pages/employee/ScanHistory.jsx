@@ -14,8 +14,8 @@ const EmployeeScanHistory = () => {
 
   const formatStatus = (log) => {
     if (log.status === 'match') return 'Match';
-    if (log.measuredWeight > log.expectedWeight) return 'Overweight';
-    return 'Underweight';
+    if (log.measuredWeight > log.expectedWeight) return 'Excess';
+    return 'Short';
   };
 
   const formatStatusKg = (log) => {
@@ -78,10 +78,14 @@ const EmployeeScanHistory = () => {
                   <td>{formatWeight(log.measuredWeight)}</td>
                   <td>{log.totalIdealProductCount != null ? log.totalIdealProductCount : 'N/A'}</td>
                   {(() => {
-                    const isMismatch = formatStatus(log) === 'Overweight' || formatStatus(log) === 'Underweight';
                     const statusText = formatStatus(log);
                     const statusKgText = formatStatusKg(log);
-                    const className = isMismatch ? 'quantix-reports__status-cell--bad' : 'quantix-reports__status-cell--good';
+
+                    const className = statusText === 'Short'
+                      ? 'quantix-reports__status-cell--short'
+                      : statusText === 'Excess'
+                        ? 'quantix-reports__status-cell--excess'
+                        : 'quantix-reports__status-cell--good';
 
                     return (
                       <>

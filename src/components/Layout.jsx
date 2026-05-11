@@ -21,9 +21,11 @@ const Layout = () => {
               <>
                 <Link to="/" className={`quantix-layout__nav-link ${location.pathname === '/' ? 'quantix-layout__nav-link--active' : ''}`}>Dashboard</Link>
                 <Link to="/products" className={`quantix-layout__nav-link ${location.pathname === '/products' ? 'quantix-layout__nav-link--active' : ''}`}>Products</Link>
-<Link to="/reports" className={`quantix-layout__nav-link ${location.pathname.startsWith('/reports') ? 'quantix-layout__nav-link--active' : ''}`}>Reports</Link>
+                <Link to="/employees" className={`quantix-layout__nav-link ${location.pathname.startsWith('/employees') ? 'quantix-layout__nav-link--active' : ''}`}>Employees</Link>
+                <Link to="/reports" className={`quantix-layout__nav-link ${location.pathname.startsWith('/reports') ? 'quantix-layout__nav-link--active' : ''}`}>Reports</Link>
               </>
             )}
+
             {user?.role === 'employee' && (
               <>
                 <Link

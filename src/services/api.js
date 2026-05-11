@@ -32,5 +32,12 @@ export const getRecentScanLogs = () => api.get('/scan/recent');
 export const getScanHistory = (partNo) => api.get('/scan/history', { params: { partNo } });
 export const getEmployeeScanHistory = () => api.get('/scan/user-history');
 
+// Admin employee management
+export const getEmployees = () => api.get('/admin/employees');
+export const createEmployee = (payload) => api.post('/admin/employees', payload);
+export const updateEmployee = (id, payload) => api.put(`/admin/employees/${id}`, payload);
+export const deleteEmployee = (id) => api.delete(`/admin/employees/${id}`);
+
 export default api;
+
 

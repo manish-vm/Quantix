@@ -176,8 +176,8 @@ const safeStopScanner = useCallback(async () => {
     if (!scanResult) return null;
     // Backend uses unitWeight/toleranceWeight on demo-data response.
     // Some responses may also include expectedWeight; support both.
-    const expectedValue = scanResult.expectedWeight ?? scanResult.unitWeight;
-    const expected = parseWeightNumber(expectedValue);
+    //const expectedValue = scanResult.expectedWeight ?? (scanResult.unitWeight * scanResult.totalCount);
+    const expected = scanResult.expectedWeight ?? (scanResult.unitWeight * scanResult.totalCount);
     const measured = parseWeightNumber(weight);
     if (expected === null || measured === null) return null;
 
@@ -211,7 +211,7 @@ const safeStopScanner = useCallback(async () => {
         measuredWeight: parseFloat(weight)
       });
       setValidationResult(res.data);
-      setScanResult(prev => ({ ...prev, remainingCount: res.data.remainingCount }));
+      //setScanResult(prev => ({ ...prev, remainingCount: res.data.remainingCount }));
 
       // Also refetch scanResult to ensure remainingCount is updated
       try {

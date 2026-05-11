@@ -59,6 +59,7 @@ const EmployeeScanHistory = () => {
                 <th>Part Description</th>
                 <th>Unit Weight</th>
                 <th>Tolerance Weight</th>
+                <th>Overall Weight</th>
                 <th>Measured Weight</th>
                 <th>Total ideal product count</th>
                 <th>Status</th>
@@ -75,17 +76,19 @@ const EmployeeScanHistory = () => {
                   <td>{log.partDescription}</td>
                   <td>{formatWeight(log.unitWeight)}</td>
                   <td>{formatWeight(log.toleranceWeight)}</td>
+                  <td>{formatWeight(log.overallWeight)}</td>
                   <td>{formatWeight(log.measuredWeight)}</td>
                   <td>{log.totalIdealProductCount != null ? log.totalIdealProductCount : 'N/A'}</td>
                   {(() => {
                     const statusText = formatStatus(log);
                     const statusKgText = formatStatusKg(log);
 
-                    const className = statusText === 'Short'
-                      ? 'quantix-reports__status-cell--short'
-                      : statusText === 'Excess'
-                        ? 'quantix-reports__status-cell--excess'
-                        : 'quantix-reports__status-cell--good';
+                    const className =
+                      statusText === 'Short'
+                        ? 'quantix-reports__status-cell--short'
+                        : statusText === 'Excess'
+                          ? 'quantix-reports__status-cell--excess'
+                          : 'quantix-reports__status-cell--good';
 
                     return (
                       <>
@@ -115,3 +118,4 @@ const EmployeeScanHistory = () => {
 };
 
 export default EmployeeScanHistory;
+

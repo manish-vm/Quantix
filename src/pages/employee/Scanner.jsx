@@ -416,6 +416,7 @@ const safeStopScanner = useCallback(async () => {
                   <th>Tolerance Weight</th>
                   {isNewProduct && <th>Total Count</th>}
                   {!isNewProduct && <th>Total Ideal Product Count</th>}
+                  {!isNewProduct && <th>Overall Weight</th>}
                   {!isNewProduct && <th>Weight</th>}
                 </tr>
               </thead>
@@ -464,6 +465,7 @@ const safeStopScanner = useCallback(async () => {
                       `${parseFloat(scanResult.toleranceWeight ?? 0).toFixed(3)} kg`
                     )}
                   </td>
+                  
                   {isNewProduct && (
                     <td>
                       <input
@@ -478,6 +480,9 @@ const safeStopScanner = useCallback(async () => {
                   )}
                   {!isNewProduct && (
                     <td>{scanResult.totalCount}</td>
+                  )}
+                  {!isNewProduct && (
+                    <td>{scanResult.unitWeight * scanResult.totalCount}</td>
                   )}
                   {!isNewProduct && (
                     <td className={weight ? 'quantix-scanner__weight-value' : 'quantix-scanner__weight-placeholder'}>

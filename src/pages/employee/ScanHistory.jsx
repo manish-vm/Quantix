@@ -25,6 +25,25 @@ const EmployeeScanHistory = () => {
     return diff > 0 ? `+${formatted} kg` : `-${formatted} kg`;
   };
 
+  const getStatusCount = (log) => {
+    const unitWeight = Number(log.unitWeight);
+    const overallWeight = Number(log.overallWeight ?? log.expectedWeight);
+    const receivedWeight = Number(log.measuredWeight);
+
+    if (!Number.isFinite(unitWeight) || unitWeight <= 0 || !Number.isFinite(overallWeight) || !Number.isFinite(receivedWeight)) {
+      return 'N/A';
+    }
+
+    const diff = receivedWeight - overallWeight;
+    if (diff === 0) return '0';
+
+    const countDiff = diff / unitWeight;
+    const roundedCount = Math.round(Math.abs(countDiff));
+    if (roundedCount === 0) return '0';
+
+    return `${diff > 0 ? '+' : '-'}${roundedCount}`;
+  };
+
   const fetchHistory = async () => {
     setLoading(true);
     setError('');
@@ -65,6 +84,7 @@ const EmployeeScanHistory = () => {
                 <th>Status</th>
                 <th>Status in Kg</th>
                 <th>Status Count</th>
+                <th>Final Validation</th>
                 <th>Scanned By</th>
                 <th>Date & Time</th>
               </tr>
@@ -97,14 +117,32 @@ const EmployeeScanHistory = () => {
                       </>
                     );
                   })()}
-                  <td>{log.expectedCount != null ? log.expectedCount : 'N/A'}</td>
+                  <td className={
+                    (() => {
+                      const unitWeight = Number(log.unitWeight);
+                      const overallWeight = Number(log.overallWeight ?? log.expectedWeight);
+                      const receivedWeight = Number(log.measuredWeight);
+                      if (!Number.isFinite(unitWeight) || unitWeight <= 0 || !Number.isFinite(overallWeight) || !Number.isFinite(receivedWeight)) {
+                        return 'quantix-reports__status-cell--good';
+                      }
+                      const diff = receivedWeight - overallWeight;
+                      if (diff > 0) return 'quantix-reports__status-cell--excess';
+                      if (diff < 0) return 'quantix-reports__status-cell--short';
+                      return 'quantix-reports__status-cell--good';
+                    })()
+                  }>
+                    {getStatusCount(log)}
+                  </td>
+                  <td className={log.finalValidationStatus === 'accepted' ? 'quantix-reports__status-cell--good' : 'quantix-reports__status-cell--short'}>
+                    {log.finalValidationStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+                  </td>
                   <td>{log.scannedByName}</td>
                   <td>{new Date(log.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
               {logs.length === 0 && (
                 <tr>
-                  <td colSpan="11" className="quantix-reports__empty">
+                  <td colSpan="12" className="quantix-reports__empty">
                     No scan history available.
                   </td>
                 </tr>

@@ -24,6 +24,34 @@
   100%{opacity:1;}
 }
 
+.quantix-employee-management__tabs{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 16px;
+  border-bottom:1px solid rgba(0,0,0,0.08);
+}
+
+.quantix-employee-management__tab{
+  border:none;
+  border-bottom:3px solid transparent;
+  background:transparent;
+  color:#333;
+  cursor:pointer;
+  font-weight:700;
+  padding:10px 16px;
+  transition:color 0.2s ease, border-color 0.2s ease;
+}
+
+.quantix-employee-management__tab:hover{
+  color:#1890ff;
+}
+
+.quantix-employee-management__tab--active{
+  border-bottom-color:#1890ff;
+  color:#1890ff;
+}
+
 /* Modal (Employee creation) */
 .quantix-modal-overlay{
   position:fixed;
@@ -98,9 +126,59 @@
   gap:14px;
 }
 
+.quantix-employee-create__role{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border:1px solid rgba(24,144,255,0.16);
+  border-radius:8px;
+  padding:10px 12px;
+  background:#f7fbff;
+}
+
+.quantix-employee-create__role-label{
+  color:rgba(0,0,0,0.75);
+  font-size:13px;
+  font-weight:800;
+}
+
+.quantix-employee-create__role-nav{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(100px, 1fr));
+  gap:6px;
+}
+
+.quantix-employee-create__role-button{
+  border:1px solid rgba(24,144,255,0.28);
+  border-radius:6px;
+  background:#fff;
+  color:#333;
+  cursor:pointer;
+  font-weight:700;
+  padding:8px 14px;
+  transition:background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.quantix-employee-create__role-button:hover:not(:disabled){
+  border-color:#1890ff;
+  color:#1890ff;
+}
+
+.quantix-employee-create__role-button--active{
+  background:#1890ff;
+  border-color:#1890ff;
+  color:#fff;
+}
+
+.quantix-employee-create__role-button:disabled{
+  cursor:not-allowed;
+  opacity:0.65;
+}
+
 .quantix-employee-create__section{
   border:1px solid rgba(0,0,0,0.06);
-  border-radius:12px;
+  border-radius:8px;
   padding:12px;
   background:linear-gradient(180deg, rgba(0,0,0,0.015), rgba(0,0,0,0));
 }
@@ -120,6 +198,10 @@
 
 @media (max-width: 720px){
   .quantix-modal{ max-width: 720px; }
+  .quantix-employee-create__role{
+    align-items:stretch;
+    flex-direction:column;
+  }
   .quantix-employee-create__grid{ grid-template-columns:1fr; }
 }
 

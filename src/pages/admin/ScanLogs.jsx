@@ -9,14 +9,37 @@ const ScanLogs = () => {
   const isFirstFilterEffect = useRef(true);
 
   const formatWeight = (value) => {
-    if (value === null || value === undefined || value === '') return 'NA';
+    if (value === null || value === undefined || value === '') return '-';
     return `${parseFloat(value).toFixed(3)} kg`;
   };
 
   const formatCount = (value) => {
-    if (value === null || value === undefined || value === '') return 'NA';
+    if (value === null || value === undefined || value === '') return '-';
     return parseFloat(value).toFixed(2);
   };
+
+  const getStatusCount = (log) => {
+    const unitWeight = Number(log.unitWeight);
+    const overallWeight = Number(log.overallWeight);
+    const receivedWeight = Number(log.receivedWeight);
+
+    if (!Number.isFinite(unitWeight) || unitWeight <= 0 || !Number.isFinite(overallWeight) || !Number.isFinite(receivedWeight)) {
+      return '-';
+    }
+
+    const diff = receivedWeight - overallWeight;
+    if (diff === 0) return '0';
+
+    const countDiff = diff / unitWeight;
+    const roundedCount = Math.round(Math.abs(countDiff));
+    if (roundedCount === 0) return '0';
+
+    return `${diff > 0 ? '+' : '-'}${roundedCount}`;
+  };
+
+  const getFinalValidationStatus = (log) => (
+    log.finalValidationStatus || (log.status === 'match' ? 'accepted' : 'rejected')
+  );
 
   const fetchScanLogs = useCallback(async (customFilters) => {
     const effectiveFilters = customFilters ?? filters;
@@ -116,11 +139,13 @@ const ScanLogs = () => {
                 <th>Received Weight</th>
                 <th>Short of</th>
                 <th>Excess of</th>
+                <th>Status Count</th>
                 <th>Total Ideal Product Count</th>
                 <th>Validated Product Count</th>
                 <th>Product Delay</th>
                 <th>Excess Product</th>
                 <th>Status</th>
+                <th>Final Validation Status</th>
                 <th>Scanned By</th>
                 <th>Date & Time</th>
               </tr>
@@ -136,6 +161,11 @@ const ScanLogs = () => {
                   <td>{formatWeight(log.receivedWeight)}</td>
                   <td>{formatWeight(log.short)}</td>
                   <td>{formatWeight(log.excess)}</td>
+                  <td className={
+                    log.short ? 'quantix-reports__status-cell--short' : log.excess ? 'quantix-reports__status-cell--excess' : 'quantix-reports__status-cell--good'
+                  }>
+                    {getStatusCount(log)}
+                  </td>
                   <td>{formatCount(log.totalIdealProductCount)}</td>
                   <td>{formatCount(log.basedOnReceivedWeightProductCount)}</td>
                   <td>{formatCount(log.productDelay)}</td>
@@ -157,6 +187,16 @@ const ScanLogs = () => {
                       );
                     })()}
                   </td>
+                  <td>
+                    {(() => {
+                      const finalStatus = getFinalValidationStatus(log);
+                      return (
+                        <span className={`quantix-reports__status-badge quantix-reports__status-badge--${finalStatus}`}>
+                          {finalStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td>{log.scannedByName}</td>
                   <td className="quantix-reports__time">{new Date(log.createdAt).toLocaleString()}</td>
                 </tr>
@@ -164,7 +204,7 @@ const ScanLogs = () => {
 
               {derivedLogs.length === 0 && (
                 <tr>
-                  <td colSpan="15" className="quantix-reports__empty">
+                  <td colSpan="17" className="quantix-reports__empty">
                     No scan logs found
                   </td>
                 </tr>

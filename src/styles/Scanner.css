@@ -205,10 +205,48 @@
   font-weight: bold;
 }
 
+.quantix-scanner__final-status {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quantix-scanner__final-status--accepted {
+  background: #f6ffed;
+  color: #389e0d;
+  border: 1px solid #b7eb8f;
+}
+
+.quantix-scanner__final-status--rejected {
+  background: #fff1f0;
+  color: #cf1322;
+  border: 1px solid #ffccc7;
+}
+
 .quantix-scanner__mode-buttons {
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.quantix-scanner__reference-weight {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #b3d8ff;
+  border-radius: 6px;
+  background: #f0f7ff;
+  color: #333;
+  font-size: 14px;
+}
+
+.quantix-scanner__reference-weight strong {
+  color: #1890ff;
+  white-space: nowrap;
 }
 
 .quantix-scanner__mode-btn {
@@ -328,6 +366,92 @@
   border: 1px solid #f0f0f0;
 }
 
+.quantix-scanner__vendor-review {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.quantix-scanner__vendor-part {
+  margin-top: 4px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.quantix-scanner__vendor-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.quantix-scanner__vendor-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.quantix-scanner__vendor-item--selected {
+  border-color: #1890ff;
+  background: #f0f7ff;
+}
+
+.quantix-scanner__vendor-radio {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.quantix-scanner__vendor-name {
+  color: #222;
+  font-weight: 700;
+}
+
+.quantix-scanner__vendor-meta,
+.quantix-scanner__vendor-weight,
+.quantix-scanner__vendor-stats {
+  color: #666;
+  font-size: 13px;
+}
+
+.quantix-scanner__vendor-weight {
+  margin-top: 4px;
+  color: #1890ff;
+  font-weight: 700;
+}
+
+.quantix-scanner__vendor-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.quantix-scanner__vendor-empty,
+.quantix-scanner__vendor-error {
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.quantix-scanner__vendor-empty {
+  background: #fafafa;
+  color: #666;
+  border: 1px solid #f0f0f0;
+}
+
+.quantix-scanner__vendor-error {
+  background: #fff2f0;
+  color: #cf1322;
+  border: 1px solid #ffccc7;
+}
+
 .quantix-scanner__logs-container {
   display: flex;
   flex-direction: column;
@@ -432,5 +556,14 @@
 
   .quantix-scanner__mode-buttons {
     flex-wrap: wrap;
+  }
+
+  .quantix-scanner__vendor-item {
+    flex-direction: column;
+  }
+
+  .quantix-scanner__vendor-stats {
+    align-items: flex-start;
+    text-align: left;
   }
 }

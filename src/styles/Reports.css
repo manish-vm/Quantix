@@ -135,6 +135,18 @@
   border: 1px solid #ffe58f;
 }
 
+.quantix-reports__status-badge--accepted {
+  background: #f6ffed;
+  color: #389e0d;
+  border: 1px solid #b7eb8f;
+}
+
+.quantix-reports__status-badge--rejected {
+  background: #fff1f0;
+  color: #cf1322;
+  border: 1px solid #ffccc7;
+}
+
 .quantix-reports__status-cell--good {
   color: #52c41a; /* green */
   font-weight: 700;

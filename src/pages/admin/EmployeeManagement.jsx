@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createEmployee,
   deleteEmployee,
@@ -32,6 +32,62 @@ const formatProfileStatus = (employmentStatus) => {
   return 'N/A';
 };
 
+const EMPLOYEE_TYPE_OVERRIDES_KEY = 'quantixEmployeeTypeOverrides';
+
+const getEmployeeTypeOverrides = () => {
+  try {
+    return JSON.parse(localStorage.getItem(EMPLOYEE_TYPE_OVERRIDES_KEY) || '{}');
+  } catch (error) {
+    return {};
+  }
+};
+
+const getEmployeeTypeKeys = (employee) => {
+  return [
+    employee?._id,
+    employee?.id,
+    employee?.email,
+    employee?.employeeId,
+  ].filter(Boolean);
+};
+
+const saveEmployeeTypeOverride = (employee, employeeType) => {
+  const keys = getEmployeeTypeKeys(employee);
+  if (keys.length === 0) return;
+
+  const overrides = getEmployeeTypeOverrides();
+  const nextOverrides = { ...overrides };
+  keys.forEach((key) => {
+    nextOverrides[key] = employeeType;
+  });
+
+  localStorage.setItem(EMPLOYEE_TYPE_OVERRIDES_KEY, JSON.stringify({
+    ...nextOverrides,
+  }));
+};
+
+const getResolvedEmployeeType = (employee) => {
+  const overrides = getEmployeeTypeOverrides();
+  const keys = getEmployeeTypeKeys(employee);
+  const overriddenType = keys.map((key) => overrides[key]).find(Boolean);
+
+  if (overriddenType) return overriddenType;
+
+  const hasVendorShape = Boolean(
+    employee?.email
+    && employee?.employeeId
+    && !employee?.department
+    && !employee?.jobTitle
+    && !employee?.manager
+  );
+
+  if (employee?.employeeType === 'employee' && hasVendorShape) {
+    return 'vendor';
+  }
+
+  return employee?.employeeType;
+};
+
 
 
 
@@ -39,6 +95,7 @@ const EmployeeManagement = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeEmployeeType, setActiveEmployeeType] = useState('employee');
 
   const [filters, setFilters] = useState({ fullName: '', department: '' });
 
@@ -55,38 +112,49 @@ const EmployeeManagement = () => {
   const [rowBusy, setRowBusy] = useState(false);
   const [message, setMessage] = useState('');
 
-  const fetchAll = async () => {
+  const setCreateRole = (employeeType) => {
+    setCreateForm((current) => ({
+      ...current,
+      employeeType,
+      department: employeeType === 'vendor' ? '' : current.department,
+      jobTitle: employeeType === 'vendor' ? '' : current.jobTitle,
+    }));
+  };
+
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     setError('');
     setMessage('');
     try {
       const res = await getEmployees();
-      setEmployees(res.data);
+      setEmployees(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || 'Failed to load employees');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchAll]);
 
   const filteredEmployees = useMemo(() => {
     const nameQ = filters.fullName.trim().toLowerCase();
     const deptQ = filters.department.trim().toLowerCase();
 
     return employees.filter((e) => {
+      const typeOk = getResolvedEmployeeType(e) === activeEmployeeType;
       const name = (e.fullName || e.name || '').toLowerCase();
+      const id = (e.employeeId || '').toLowerCase();
+      const contact = (e.contactDetails || '').toLowerCase();
       const dept = (e.department || '').toLowerCase();
-      const nameOk = !nameQ || name.includes(nameQ);
-      const deptOk = !deptQ || dept.includes(deptQ);
-      return nameOk && deptOk;
+      const nameOk = !nameQ || name.includes(nameQ) || id.includes(nameQ) || contact.includes(nameQ);
+      const deptOk = activeEmployeeType === 'vendor' || !deptQ || dept.includes(deptQ);
+      return typeOk && nameOk && deptOk;
     });
-  }, [employees, filters]);
+  }, [activeEmployeeType, employees, filters]);
 
   const beginEdit = (emp) => {
     setEditingId(emp._id);
@@ -128,10 +196,19 @@ const EmployeeManagement = () => {
         hireDate: createForm.hireDate ? new Date(createForm.hireDate) : undefined,
       };
 
-      await createEmployee(payload);
+      const createdType = createForm.employeeType;
+      const created = await createEmployee(payload);
+      saveEmployeeTypeOverride({ ...payload, ...created.data }, createdType);
+      setActiveEmployeeType(createdType);
       setCreateForm(emptyEmployeeForm);
       setShowCreateModal(false);
-      await fetchAll();
+      const res = await getEmployees();
+      const nextEmployees = Array.isArray(res.data) ? res.data : [];
+      const createdKeys = new Set(getEmployeeTypeKeys({ ...payload, ...created.data }));
+      const includesCreated = nextEmployees.some((employee) => (
+        getEmployeeTypeKeys(employee).some((key) => createdKeys.has(key))
+      ));
+      setEmployees(includesCreated ? nextEmployees : [{ ...payload, ...created.data }, ...nextEmployees]);
       alert('Employee created successfully');
     } catch (err) {
       console.error(err);
@@ -224,23 +301,50 @@ const EmployeeManagement = () => {
         </button>
       </div>
 
+      <div className="quantix-employee-management__tabs" aria-label="Employee management sections">
+        <button
+          type="button"
+          className={`quantix-employee-management__tab ${activeEmployeeType === 'employee' ? 'quantix-employee-management__tab--active' : ''}`}
+          onClick={() => {
+            setActiveEmployeeType('employee');
+            setFilters({ fullName: '', department: '' });
+            cancelEdit();
+          }}
+        >
+          Employee
+        </button>
+        <button
+          type="button"
+          className={`quantix-employee-management__tab ${activeEmployeeType === 'vendor' ? 'quantix-employee-management__tab--active' : ''}`}
+          onClick={() => {
+            setActiveEmployeeType('vendor');
+            setFilters({ fullName: '', department: '' });
+            cancelEdit();
+          }}
+        >
+          Vendor
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="quantix-reports__filters" style={{ marginBottom: 16 }}>
 
 
 
         <input
-          placeholder="Search Full Name"
+          placeholder={activeEmployeeType === 'vendor' ? 'Search Vendor' : 'Search Employee'}
           value={filters.fullName}
           onChange={(e) => setFilters({ ...filters, fullName: e.target.value })}
           className="quantix-reports__input"
         />
-        <input
-          placeholder="Search Department"
-          value={filters.department}
-          onChange={(e) => setFilters({ ...filters, department: e.target.value })}
-          className="quantix-reports__input"
-        />
+        {activeEmployeeType === 'employee' && (
+          <input
+            placeholder="Search Department"
+            value={filters.department}
+            onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+            className="quantix-reports__input"
+          />
+        )}
         <button onClick={fetchAll} className="quantix-reports__button">
           Refresh
         </button>
@@ -274,13 +378,35 @@ const EmployeeManagement = () => {
 
             <div className="quantix-modal__body">
               <div className="quantix-employee-create__content">
+                <div className="quantix-employee-create__role">
+                  <div className="quantix-employee-create__role-label">Role</div>
+                  <div className="quantix-employee-create__role-nav" aria-label="Employee role">
+                    <button
+                      type="button"
+                      className={`quantix-employee-create__role-button ${createForm.employeeType === 'employee' ? 'quantix-employee-create__role-button--active' : ''}`}
+                      onClick={() => setCreateRole('employee')}
+                      disabled={creating}
+                    >
+                      Employee
+                    </button>
+                    <button
+                      type="button"
+                      className={`quantix-employee-create__role-button ${createForm.employeeType === 'vendor' ? 'quantix-employee-create__role-button--active' : ''}`}
+                      onClick={() => setCreateRole('vendor')}
+                      disabled={creating}
+                    >
+                      Vendor
+                    </button>
+                  </div>
+                </div>
+
                 <div className="quantix-employee-create__sections">
                   <div className="quantix-employee-create__section">
                     <div className="quantix-employee-create__section-title">Identity</div>
                     <div className="quantix-employee-create__grid">
 
                       <input
-                        placeholder="Employee/Vendor ID"
+                        placeholder={createForm.employeeType === 'vendor' ? 'Vendor ID Code' : 'Emp ID'}
                         value={createForm.employeeId}
                         onChange={(e) => setCreateForm({ ...createForm, employeeId: e.target.value })}
                         className="quantix-reports__input"
@@ -288,35 +414,25 @@ const EmployeeManagement = () => {
                       />
 
                       <input
-                        placeholder="Full Name"
+                        placeholder={createForm.employeeType === 'vendor' ? 'Vendor Name' : 'Full Name'}
                         value={createForm.fullName}
                         onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
                         className="quantix-reports__input"
                         disabled={creating}
                       />
 
-                      <input
-                        placeholder="Department"
-                        value={createForm.department}
-                        onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })}
-                        className="quantix-reports__input"
-                        disabled={creating}
-                      />
-                      
-                      <select
-        
-                         value={createForm.jobTitle}
-                        onChange={(e) => setCreateForm({ ...createForm, jobTitle: e.target.value })}
-                        className="quantix-reports__input"
-                        disabled={creating}
-                      >
-                        <option value="employee">Employee</option>
-                        <option value="vendor">Vendor</option>
-                      </select>
-                      
+                      {createForm.employeeType === 'employee' && (
+                        <input
+                          placeholder="Department"
+                          value={createForm.department}
+                          onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })}
+                          className="quantix-reports__input"
+                          disabled={creating}
+                        />
+                      )}
 
                       <input
-                        placeholder="Contact Details"
+                        placeholder="Contact No"
                         value={createForm.contactDetails}
                         onChange={(e) => setCreateForm({ ...createForm, contactDetails: e.target.value })}
                         className="quantix-reports__input"
@@ -333,10 +449,9 @@ const EmployeeManagement = () => {
                         <option value="part-time">Inactive</option>
                       </select>
 
-
                       <input
                         type="email"
-                        placeholder="Email (login)"
+                        placeholder="Email"
                         value={createForm.email}
                         onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                         className="quantix-reports__input"
@@ -388,11 +503,11 @@ const EmployeeManagement = () => {
           <table className="quantix-reports__table">
             <thead>
               <tr>
-                <th>Employee ID</th>
-                <th>Full Name</th>
-                <th>Department</th>
-                <th>Job Title</th>
-                <th>Contact Details</th>
+                <th>{activeEmployeeType === 'vendor' ? 'Vendor ID Code' : 'Emp ID'}</th>
+                <th>{activeEmployeeType === 'vendor' ? 'Vendor Name' : 'Full Name'}</th>
+                {activeEmployeeType === 'employee' && <th>Department</th>}
+                <th>Contact No</th>
+                <th>Email</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -406,9 +521,9 @@ const EmployeeManagement = () => {
                       <>
                         <td>{e.employeeId || 'N/A'}</td>
                         <td>{e.fullName || e.name || 'N/A'}</td>
-                        <td>{e.department || 'N/A'}</td>
-                        <td>{e.jobTitle || 'N/A'}</td>
+                        {activeEmployeeType === 'employee' && <td>{e.department || 'N/A'}</td>}
                         <td>{e.contactDetails || 'N/A'}</td>
+                        <td>{e.email || 'N/A'}</td>
                         <td>
                           <span
                             className={
@@ -451,39 +566,27 @@ const EmployeeManagement = () => {
                             onChange={(ev) => setEditForm({ ...editForm, fullName: ev.target.value })}
                           />
                         </td>
-                        <td>
-                          <input
-                            className="quantix-reports__input"
-                            value={editForm.department}
-                            onChange={(ev) => setEditForm({ ...editForm, department: ev.target.value })}
-                          />
-                        </td>
-                        <td>
-                          <select
-                            className="quantix-reports__input"
-                            value={editForm.jobTitle}
-                            onChange={(ev) => setEditForm({ ...editForm, jobTitle: ev.target.value })}
-                          >
-                            {editForm.employeeType === 'vendor' ? (
-                              <>
-                                <option value="">Select Vendor</option>
-                                <option value="Vendor">Vendor</option>
-                                <option value="Employee">Employee</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="">Select Employee type</option>
-                                <option value="Employee">Employee</option>
-                                <option value="Vendor">Vendor</option>
-                              </>
-                            )}
-                          </select>
-                        </td>
+                        {activeEmployeeType === 'employee' && (
+                          <td>
+                            <input
+                              className="quantix-reports__input"
+                              value={editForm.department}
+                              onChange={(ev) => setEditForm({ ...editForm, department: ev.target.value })}
+                            />
+                          </td>
+                        )}
                         <td>
                           <input
                             className="quantix-reports__input"
                             value={editForm.contactDetails}
                             onChange={(ev) => setEditForm({ ...editForm, contactDetails: ev.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="quantix-reports__input"
+                            value={editForm.email}
+                            onChange={(ev) => setEditForm({ ...editForm, email: ev.target.value })}
                           />
                         </td>
                         <td>
@@ -523,7 +626,9 @@ const EmployeeManagement = () => {
 
               {filteredEmployees.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="quantix-reports__empty">No employees found</td>
+                  <td colSpan={activeEmployeeType === 'vendor' ? 6 : 7} className="quantix-reports__empty">
+                    No {activeEmployeeType === 'vendor' ? 'vendors' : 'employees'} found
+                  </td>
                 </tr>
               )}
             </tbody>

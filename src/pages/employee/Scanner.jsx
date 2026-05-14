@@ -1,15 +1,23 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import api from '../../services/api';
+import api, { getVendorSubmissionsForPart } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import bluetoothScale from '../../utils/bluetooth';
 import wifiScale from '../../utils/wifi';
 import '../../styles/Scanner.css';
 
 const Scanner = () => {
+  const { user } = useAuth();
   const [scanResult, setScanResult] = useState(null);
   const [weight, setWeight] = useState('');
   const [validationResult, setValidationResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [vendorSubmissions, setVendorSubmissions] = useState([]);
+  const [vendorSubmissionsLoading, setVendorSubmissionsLoading] = useState(false);
+  const [vendorSubmissionsError, setVendorSubmissionsError] = useState('');
+  const [selectedVendorSubmissionId, setSelectedVendorSubmissionId] = useState('');
+  const [selectedVendorSubmission, setSelectedVendorSubmission] = useState(null);
+  const [productDetailsUnlocked, setProductDetailsUnlocked] = useState(false);
   const [scannerReady, setScannerReady] = useState(false);
   const [connectionMode, setConnectionMode] = useState('manual');
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
@@ -22,6 +30,33 @@ const Scanner = () => {
   const scannerContainerId = 'qr-reader';
 
   const isScanningRef = useRef(false);
+  const shouldReviewVendorSubmissions = user?.role === 'employee' && user?.employeeType !== 'vendor';
+
+  const loadVendorSubmissions = useCallback(async (partNo) => {
+    setVendorSubmissions([]);
+    setVendorSubmissionsError('');
+    setSelectedVendorSubmissionId('');
+    setSelectedVendorSubmission(null);
+
+    if (!shouldReviewVendorSubmissions) {
+      setProductDetailsUnlocked(true);
+      return;
+    }
+
+    setVendorSubmissionsLoading(true);
+    setProductDetailsUnlocked(false);
+
+    try {
+      const res = await getVendorSubmissionsForPart(partNo);
+      const vendors = res.data?.vendors || [];
+      setVendorSubmissions(vendors);
+      setSelectedVendorSubmissionId(vendors.length === 1 ? getVendorSubmissionId(vendors[0]) : '');
+    } catch (err) {
+      setVendorSubmissionsError(err.response?.data?.message || 'Failed to load vendor submissions');
+    } finally {
+      setVendorSubmissionsLoading(false);
+    }
+  }, [shouldReviewVendorSubmissions]);
 
 const handleScan = useCallback(async (partNo) => {
     if (isScanningRef.current) return;
@@ -34,6 +69,11 @@ const handleScan = useCallback(async (partNo) => {
     setError('');
     setValidationResult(null);
     setScanResult(null);
+    setVendorSubmissions([]);
+    setVendorSubmissionsError('');
+    setSelectedVendorSubmissionId('');
+    setSelectedVendorSubmission(null);
+    setProductDetailsUnlocked(false);
     setWeight('');
     setConnectionMode('manual');
     setBluetoothConnected(false);
@@ -45,6 +85,7 @@ const handleScan = useCallback(async (partNo) => {
       const res = await api.get(`/demo-data/${upperPartNo}`);
       setScanResult(res.data);
       setIsNewProduct(false);
+      await loadVendorSubmissions(upperPartNo);
     } catch (err) {
       // Backend returns 404 with { message, requiresDemoData: true }
       // Allow demo creation for that case and stop treating it as a hard error.
@@ -57,6 +98,7 @@ const handleScan = useCallback(async (partNo) => {
           totalCount: ''
         });
         setIsNewProduct(true);
+        setProductDetailsUnlocked(true);
         return;
       }
 
@@ -65,7 +107,7 @@ const handleScan = useCallback(async (partNo) => {
       setLoading(false);
       isScanningRef.current = false;
     }
-  }, [setLoading, setError, setValidationResult, setScanResult, setWeight, setConnectionMode, setBluetoothConnected, setWifiConnected, setPartNoInput]);
+  }, [loadVendorSubmissions, setLoading, setError, setValidationResult, setScanResult, setWeight, setConnectionMode, setBluetoothConnected, setWifiConnected, setPartNoInput]);
 
 const safeStopScanner = useCallback(async () => {
   if (!scannerRef.current) return;
@@ -172,25 +214,52 @@ const safeStopScanner = useCallback(async () => {
     return Number.isFinite(n) ? n : null;
   };
 
+  const formatWeight = (val) => {
+    const n = parseWeightNumber(val);
+    return n === null ? 'N/A' : `${n.toFixed(2)} kg`;
+  };
+
+  const getVendorSubmissionId = (vendor) => (
+    String(vendor.vendorId || `${vendor.vendorName}-${vendor.submittedAt}`)
+  );
+
+  const getFinalValidationDisplay = () => {
+    if (!validationResult?.finalValidationStatus) return '-';
+    return validationResult.finalValidationStatus === 'accepted' ? 'Accepted' : 'Rejected';
+  };
+
+  const handleContinueToProductDetails = () => {
+    if (vendorSubmissions.length > 0 && !selectedVendorSubmissionId) return;
+
+    const selectedVendor = vendorSubmissions.find((vendor) => (
+      getVendorSubmissionId(vendor) === selectedVendorSubmissionId
+    ));
+
+    setSelectedVendorSubmission(selectedVendor || null);
+    setWeight('');
+    setProductDetailsUnlocked(true);
+  };
+
   const getLiveWeightStatus = () => {
     if (!scanResult) return null;
     // Backend uses unitWeight/toleranceWeight on demo-data response.
     // Some responses may also include expectedWeight; support both.
     //const expectedValue = scanResult.expectedWeight ?? (scanResult.unitWeight * scanResult.totalCount);
-    const expected = scanResult.expectedWeight ?? (scanResult.unitWeight * scanResult.totalCount);
+    const selectedReferenceWeight = selectedVendorSubmission?.overallWeight ?? selectedVendorSubmission?.measuredWeight;
+    const expected = selectedReferenceWeight ?? scanResult.expectedWeight ?? (scanResult.unitWeight * scanResult.totalCount);
     const measured = parseWeightNumber(weight);
     if (expected === null || measured === null) return null;
 
-    const toleranceRaw = scanResult.toleranceWeight ?? 0;
-    const tolerance = parseWeightNumber(toleranceRaw);
-
-    const safeTolerance = tolerance === null ? 0 : tolerance;
-
     const diff = measured - expected;
 
-    const absDiff = Math.abs(diff);
-
-    if (absDiff <= safeTolerance) return { kind: 'match', displayDiff: 0 };
+    if (selectedReferenceWeight !== undefined && selectedReferenceWeight !== null) {
+      if (diff === 0) return { kind: 'match', displayDiff: 0 };
+    } else {
+      const toleranceRaw = scanResult.toleranceWeight ?? 0;
+      const tolerance = parseWeightNumber(toleranceRaw);
+      const safeTolerance = tolerance === null ? 0 : tolerance;
+      if (Math.abs(diff) <= safeTolerance) return { kind: 'match', displayDiff: 0 };
+    }
 
     if (diff > 0) return { kind: 'excess', displayDiff: diff };
     return { kind: 'short', displayDiff: diff };
@@ -206,9 +275,13 @@ const safeStopScanner = useCallback(async () => {
 
 
     try {
+      const referenceWeight = selectedVendorSubmission?.overallWeight ?? selectedVendorSubmission?.measuredWeight;
       const res = await api.post('/scan', {
         partNo: scanResult.partNo,
-        measuredWeight: parseFloat(weight)
+        measuredWeight: parseFloat(weight),
+        ...(referenceWeight !== undefined && referenceWeight !== null && referenceWeight !== ''
+          ? { referenceWeight: parseFloat(referenceWeight) }
+          : {})
       });
       setValidationResult(res.data);
       //setScanResult(prev => ({ ...prev, remainingCount: res.data.remainingCount }));
@@ -289,6 +362,11 @@ const safeStopScanner = useCallback(async () => {
   setValidationResult(null);
   setWeight('');
   setError('');
+  setVendorSubmissions([]);
+  setVendorSubmissionsError('');
+  setSelectedVendorSubmissionId('');
+  setSelectedVendorSubmission(null);
+  setProductDetailsUnlocked(false);
   setConnectionMode('manual');
   setBluetoothConnected(false);
   setWifiConnected(false);
@@ -333,6 +411,7 @@ const safeStopScanner = useCallback(async () => {
       const res = await api.get(`/demo-data/${scanResult.partNo}`);
       setScanResult(res.data);
       setIsNewProduct(false);
+      setProductDetailsUnlocked(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create demo data');
     } finally {
@@ -349,6 +428,9 @@ const safeStopScanner = useCallback(async () => {
     wifiScale.disconnect();
   };
 }, [startScanner, safeStopScanner]);
+
+  const showVendorReview = scanResult && !isNewProduct && shouldReviewVendorSubmissions && !productDetailsUnlocked;
+
   return (
     <>
     <div
@@ -395,8 +477,71 @@ const safeStopScanner = useCallback(async () => {
           </button>
         </div>
       )}
+      <br></br>
+      {showVendorReview && (
+        <div className="quantix-scanner__card quantix-scanner__vendor-review">
+          <div className="quantix-scanner__product-header">
+            <div>
+              <h3 className="quantix-scanner__product-title">Vendor Submissions</h3>
+              <div className="quantix-scanner__vendor-part">Part No: {scanResult.partNo}</div>
+            </div>
+            <button onClick={resetScan} className="quantix-scanner__button--small-gray">
+              New Scan
+            </button>
+          </div>
 
-      {scanResult && (
+          {vendorSubmissionsLoading ? (
+            <div className="quantix-scanner__vendor-empty">Loading vendor submissions...</div>
+          ) : vendorSubmissionsError ? (
+            <div className="quantix-scanner__vendor-error">{vendorSubmissionsError}</div>
+          ) : vendorSubmissions.length === 0 ? (
+            <div className="quantix-scanner__vendor-empty">
+              No vendor has submitted this part number yet.
+            </div>
+          ) : (
+            <div className="quantix-scanner__vendor-list">
+              {vendorSubmissions.map((vendor) => (
+                <label
+                  key={getVendorSubmissionId(vendor)}
+                  className={`quantix-scanner__vendor-item ${selectedVendorSubmissionId === getVendorSubmissionId(vendor) ? 'quantix-scanner__vendor-item--selected' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="vendorSubmission"
+                    value={getVendorSubmissionId(vendor)}
+                    checked={selectedVendorSubmissionId === getVendorSubmissionId(vendor)}
+                    onChange={() => setSelectedVendorSubmissionId(getVendorSubmissionId(vendor))}
+                    className="quantix-scanner__vendor-radio"
+                  />
+                  <div>
+                    <div className="quantix-scanner__vendor-name">{vendor.vendorName}</div>
+                    <div className="quantix-scanner__vendor-meta">
+                      {vendor.vendorCode ? `Vendor ID: ${vendor.vendorCode}` : 'Vendor ID: N/A'}
+                    </div>
+                    <div className="quantix-scanner__vendor-weight">
+                      Overall Weight Recorded: {formatWeight(vendor.overallWeight ?? vendor.measuredWeight)}
+                    </div>
+                  </div>
+                  <div className="quantix-scanner__vendor-stats">
+                    <span>{vendor.scanCount} submission{vendor.scanCount === 1 ? '' : 's'}</span>
+                    <span>{new Date(vendor.submittedAt).toLocaleString()}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={handleContinueToProductDetails}
+            className="quantix-scanner__button--validate"
+            disabled={vendorSubmissionsLoading || (vendorSubmissions.length > 0 && !selectedVendorSubmissionId)}
+          >
+            Continue to Product Details
+          </button>
+        </div>
+      )}
+
+      {scanResult && !showVendorReview && (
         <div className="quantix-scanner__scan-grid">
           <div className="quantix-scanner__scan-grid-main">
             <div className="quantix-scanner__card">
@@ -418,6 +563,7 @@ const safeStopScanner = useCallback(async () => {
                   {!isNewProduct && <th>Total Ideal Product Count</th>}
                   {!isNewProduct && <th>Overall Weight</th>}
                   {!isNewProduct && <th>Weight</th>}
+                  {!isNewProduct && <th>Final Validation Status</th>}
                 </tr>
               </thead>
               <tbody>
@@ -489,6 +635,17 @@ const safeStopScanner = useCallback(async () => {
                       {weight ? `${parseFloat(weight).toFixed(2)} kg` : '-'}
                     </td>
                   )}
+                  {!isNewProduct && (
+                    <td>
+                      {validationResult?.finalValidationStatus ? (
+                        <span className={`quantix-scanner__final-status quantix-scanner__final-status--${validationResult.finalValidationStatus}`}>
+                          {getFinalValidationDisplay()}
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                  )}
                 </tr>
               </tbody>
             </table>
@@ -506,6 +663,12 @@ const safeStopScanner = useCallback(async () => {
             ) : (
               <>
                 <h3 className="quantix-scanner__section-title">Weight Input</h3>
+                {selectedVendorSubmission && (
+                  <div className="quantix-scanner__reference-weight">
+                    <span>Cross-checking vendor weight</span>
+                    <strong>{formatWeight(selectedVendorSubmission.overallWeight ?? selectedVendorSubmission.measuredWeight)}</strong>
+                  </div>
+                )}
                 <div className="quantix-scanner__mode-buttons">
                   <button onClick={() => handleModeChange('manual')} className={`quantix-scanner__mode-btn ${connectionMode === 'manual' ? 'quantix-scanner__mode-btn--active' : ''}`}>Manual</button>
                   <button onClick={() => handleModeChange('bluetooth')} className={`quantix-scanner__mode-btn ${connectionMode === 'bluetooth' ? 'quantix-scanner__mode-btn--active' : ''}`}>Bluetooth</button>
@@ -623,6 +786,9 @@ const safeStopScanner = useCallback(async () => {
               </div>
               <div className="quantix-scanner__validation-detail">
                 Expected Count: {validationResult.expectedCount}
+              </div>
+              <div className="quantix-scanner__validation-detail">
+                Final Validation Status: {validationResult.finalValidationStatus === 'accepted' ? 'Accepted' : 'Rejected'}
               </div>
             </div>
           )}

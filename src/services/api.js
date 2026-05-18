@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://quantix-backend-2w1l.onrender.com/api',
+  baseURL: ' https://quantix-backend-2w1l.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -31,9 +31,12 @@ export const getScanSummary = () => api.get('/scan/summary');
 export const getRecentScanLogs = () => api.get('/scan/recent');
 export const getScanHistory = (partNo) => api.get('/scan/history', { params: { partNo } });
 export const getEmployeeScanHistory = () => api.get('/scan/user-history');
-export const getVendorSubmissionsForPart = (partNo) => (
-  api.get('/scan/vendor-submissions', { params: { partNo } })
-);
+export const getVendorScanHistory = () => api.get('/scan/vendor-history');
+export const getVendorSubmissionsForPart = (partNo) =>
+  api.get(
+    `/scan/vendor-submissions?partNo=${partNo}`
+  );
+
 
 // Admin employee management
 export const getEmployees = (employeeType) => api.get('/admin/employees', {

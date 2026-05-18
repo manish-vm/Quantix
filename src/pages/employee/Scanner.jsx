@@ -26,6 +26,12 @@ const Scanner = () => {
   const [error, setError] = useState('');
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [partNoInput, setPartNoInput] = useState('');
+  const [vendorEditableData, setVendorEditableData] =
+    useState({
+      unitWeight: '',
+      toleranceWeight: '',
+      totalCount: ''
+    });
   const scannerRef = useRef(null);
   const scannerContainerId = 'qr-reader';
 
@@ -48,17 +54,27 @@ const Scanner = () => {
 
     try {
       const res = await getVendorSubmissionsForPart(partNo);
-      const vendors = res.data?.vendors || [];
+
+      const vendors = (res.data?.vendors || []).filter(
+        (vendor) => vendor.remainingReviewCount > 0
+      );
+
       setVendorSubmissions(vendors);
-      setSelectedVendorSubmissionId(vendors.length === 1 ? getVendorSubmissionId(vendors[0]) : '');
+
+      if (vendors.length === 1) {
+        setSelectedVendorSubmissionId(vendors[0]._id);
+      }
     } catch (err) {
-      setVendorSubmissionsError(err.response?.data?.message || 'Failed to load vendor submissions');
+      setVendorSubmissionsError(
+        err.response?.data?.message ||
+        'Failed to load vendor submissions'
+      );
     } finally {
       setVendorSubmissionsLoading(false);
     }
   }, [shouldReviewVendorSubmissions]);
 
-const handleScan = useCallback(async (partNo) => {
+  const handleScan = useCallback(async (partNo) => {
     if (isScanningRef.current) return;
     const upperPartNo = (partNo || '').trim().toUpperCase();
     if (!upperPartNo) return;
@@ -84,6 +100,12 @@ const handleScan = useCallback(async (partNo) => {
     try {
       const res = await api.get(`/demo-data/${upperPartNo}`);
       setScanResult(res.data);
+      setVendorEditableData({
+        unitWeight: res.data.unitWeight || '',
+        toleranceWeight:
+          res.data.toleranceWeight || '',
+        totalCount: res.data.totalCount || ''
+      });
       setIsNewProduct(false);
       await loadVendorSubmissions(upperPartNo);
     } catch (err) {
@@ -109,102 +131,102 @@ const handleScan = useCallback(async (partNo) => {
     }
   }, [loadVendorSubmissions, setLoading, setError, setValidationResult, setScanResult, setWeight, setConnectionMode, setBluetoothConnected, setWifiConnected, setPartNoInput]);
 
-const safeStopScanner = useCallback(async () => {
-  if (!scannerRef.current) return;
+  const safeStopScanner = useCallback(async () => {
+    if (!scannerRef.current) return;
 
-  try {
-    await scannerRef.current.stop();
-  } catch (e) {
-    const msg = e?.message || '';
-    if (!msg.includes('scanner is not running or paused')) {
-      console.error('Stop scanner error:', e);
-    }
-  }
-
-  try {
-    await scannerRef.current.clear();
-  } catch (e) {
-    console.error('Clear scanner error:', e);
-  }
-
-  scannerRef.current = null;
-  setScannerReady(false);
-}, []);
-
-
- const startScanner = useCallback(async () => {
-  try {
-    // Prevent duplicate initialization
-    if (scannerRef.current) {
-      return;
+    try {
+      await scannerRef.current.stop();
+    } catch (e) {
+      const msg = e?.message || '';
+      if (!msg.includes('scanner is not running or paused')) {
+        console.error('Stop scanner error:', e);
+      }
     }
 
-    const el = document.getElementById(scannerContainerId);
-    if (el) {
-      el.innerHTML = '';
+    try {
+      await scannerRef.current.clear();
+    } catch (e) {
+      console.error('Clear scanner error:', e);
     }
 
-    const scanner = new Html5Qrcode(scannerContainerId, {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.QR_CODE,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.CODABAR,
-        Html5QrcodeSupportedFormats.ITF,
-      ]
-    });
+    scannerRef.current = null;
+    setScannerReady(false);
+  }, []);
 
-    scannerRef.current = scanner;
 
-    await scanner.start(
-      { facingMode: 'environment' },
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 }
-      },
-      async (decodedText) => {
-        const rawText = (decodedText || '').trim();
-        const upperRaw = rawText.toUpperCase();
+  const startScanner = useCallback(async () => {
+    try {
+      // Prevent duplicate initialization
+      if (scannerRef.current) {
+        return;
+      }
 
-        let extractedPartNo = upperRaw;
+      const el = document.getElementById(scannerContainerId);
+      if (el) {
+        el.innerHTML = '';
+      }
 
-        try {
-          if (upperRaw.includes('/')) {
-            extractedPartNo =
-              upperRaw.substring(upperRaw.lastIndexOf('/') + 1);
+      const scanner = new Html5Qrcode(scannerContainerId, {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODABAR,
+          Html5QrcodeSupportedFormats.ITF,
+        ]
+      });
+
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        async (decodedText) => {
+          const rawText = (decodedText || '').trim();
+          const upperRaw = rawText.toUpperCase();
+
+          let extractedPartNo = upperRaw;
+
+          try {
+            if (upperRaw.includes('/')) {
+              extractedPartNo =
+                upperRaw.substring(upperRaw.lastIndexOf('/') + 1);
+            }
+
+            if (extractedPartNo.includes('?')) {
+              extractedPartNo = extractedPartNo.split('?')[0];
+            }
+
+            extractedPartNo = extractedPartNo.trim();
+          } catch {
+            extractedPartNo = upperRaw.trim();
           }
 
-          if (extractedPartNo.includes('?')) {
-            extractedPartNo = extractedPartNo.split('?')[0];
-          }
+          // STOP CAMERA AFTER SUCCESSFUL SCAN
+          await safeStopScanner();
 
-          extractedPartNo = extractedPartNo.trim();
-        } catch {
-          extractedPartNo = upperRaw.trim();
-        }
+          setPartNoInput(extractedPartNo);
+          handleScan(extractedPartNo);
+        },
+        () => { }
+      );
 
-        // STOP CAMERA AFTER SUCCESSFUL SCAN
-        await safeStopScanner();
+      setScannerReady(true);
+    } catch (err) {
+      console.error('Scanner init error:', err);
 
-        setPartNoInput(extractedPartNo);
-        handleScan(extractedPartNo);
-      },
-      () => {}
-    );
-
-    setScannerReady(true);
-  } catch (err) {
-    console.error('Scanner init error:', err);
-
-    setError(
-      'Camera access denied or not available. You can enter Part No manually below.'
-    );
-  }
-}, [handleScan, safeStopScanner]);
+      setError(
+        'Camera access denied or not available. You can enter Part No manually below.'
+      );
+    }
+  }, [handleScan, safeStopScanner]);
 
 
 
@@ -219,9 +241,7 @@ const safeStopScanner = useCallback(async () => {
     return n === null ? 'N/A' : `${n.toFixed(2)} kg`;
   };
 
-  const getVendorSubmissionId = (vendor) => (
-    String(vendor.vendorId || `${vendor.vendorName}-${vendor.submittedAt}`)
-  );
+  const getVendorSubmissionId = (vendor) => String(vendor._id);
 
   const getFinalValidationDisplay = () => {
     if (!validationResult?.finalValidationStatus) return '-';
@@ -231,9 +251,9 @@ const safeStopScanner = useCallback(async () => {
   const handleContinueToProductDetails = () => {
     if (vendorSubmissions.length > 0 && !selectedVendorSubmissionId) return;
 
-    const selectedVendor = vendorSubmissions.find((vendor) => (
-      getVendorSubmissionId(vendor) === selectedVendorSubmissionId
-    ));
+    const selectedVendor = vendorSubmissions.find(
+      (vendor) => vendor._id === selectedVendorSubmissionId
+    );
 
     setSelectedVendorSubmission(selectedVendor || null);
     setWeight('');
@@ -267,39 +287,121 @@ const safeStopScanner = useCallback(async () => {
 
   const handleValidate = async () => {
     if (!scanResult || !weight) return;
+
     setLoading(true);
     setError('');
 
-    // Snapshot live validation to keep UI in sync.
-    // (Used to show border + +/- adornment before validate completes.)
-
-
     try {
-      const referenceWeight = selectedVendorSubmission?.overallWeight ?? selectedVendorSubmission?.measuredWeight;
-      const res = await api.post('/scan', {
-        partNo: scanResult.partNo,
-        measuredWeight: parseFloat(weight),
-        ...(referenceWeight !== undefined && referenceWeight !== null && referenceWeight !== ''
-          ? { referenceWeight: parseFloat(referenceWeight) }
-          : {})
-      });
-      setValidationResult(res.data);
-      //setScanResult(prev => ({ ...prev, remainingCount: res.data.remainingCount }));
+      const referenceWeight =
+        selectedVendorSubmission?.overallWeight ??
+        selectedVendorSubmission?.measuredWeight;
 
-      // Also refetch scanResult to ensure remainingCount is updated
+      const payload = {
+        partNo: scanResult.partNo,
+        measuredWeight: parseFloat(weight)
+      };
+
+      if (
+        referenceWeight !== undefined &&
+        referenceWeight !== null &&
+        referenceWeight !== ''
+      ) {
+        payload.referenceWeight = parseFloat(referenceWeight);
+      }
+
+      // IMPORTANT
+      if (selectedVendorSubmission?._id) {
+        payload.vendorSubmissionId =
+          selectedVendorSubmission._id;
+      }
+
+      const res = await api.post('/scan', payload);
+
+      setValidationResult(res.data);
+
+      // DYNAMICALLY UPDATE UI
+      if (
+        res.data?.status === 'match' &&
+        selectedVendorSubmission
+      ) {
+        const updatedVendorId =
+          selectedVendorSubmission._id;
+
+        setVendorSubmissions((prev) => {
+          const updated = prev
+            .map((vendor) => {
+              if (vendor._id !== updatedVendorId) {
+                return vendor;
+              }
+
+              const updatedRemaining =
+                (vendor.remainingReviewCount || 0) - 1;
+
+              return {
+                ...vendor,
+                reviewedCount:
+                  (vendor.reviewedCount || 0) + 1,
+                remainingReviewCount: updatedRemaining
+              };
+            })
+            .filter(
+              (vendor) => vendor.remainingReviewCount > 0
+            );
+
+          return updated;
+        });
+
+        // Update selected vendor state
+        setSelectedVendorSubmission((prev) => {
+          if (!prev) return null;
+
+          const updatedRemaining =
+            (prev.remainingReviewCount || 0) - 1;
+
+          // REMOVE WHEN COUNT REACHES ZERO
+          if (updatedRemaining <= 0) {
+            return null;
+          }
+
+          return {
+            ...prev,
+            reviewedCount:
+              (prev.reviewedCount || 0) + 1,
+            remainingReviewCount: updatedRemaining
+          };
+        });
+
+        // AUTO RESET IF COUNT FINISHED
+        if (
+          (selectedVendorSubmission.remainingReviewCount || 0) - 1 <= 0
+        ) {
+          setSelectedVendorSubmissionId('');
+
+          setTimeout(() => {
+            resetScan();
+          }, 1200);
+        }
+      }
+
+      // Refetch product info
       try {
-        const res = await api.get(`/demo-data/${scanResult.partNo}`);
-        setScanResult(res.data);
+        const refreshed = await api.get(
+          `/demo-data/${scanResult.partNo}`
+        );
+
+        setScanResult(refreshed.data);
       } catch (err) {
-        console.error('Failed to refetch scan result:', err);
+        console.error(err);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Validation failed');
+      setError(
+        err.response?.data?.message ||
+        'Validation failed'
+      );
     } finally {
       setLoading(false);
     }
   };
-
   const handleModeChange = (mode) => {
     setConnectionMode(mode);
     setWeight('');
@@ -348,50 +450,50 @@ const safeStopScanner = useCallback(async () => {
     }
   };
 
- const handleManualPartNo = async (e) => {
-  e.preventDefault();
+  const handleManualPartNo = async (e) => {
+    e.preventDefault();
 
-  if (partNoInput) {
+    if (partNoInput) {
+      await safeStopScanner();
+      handleScan(partNoInput);
+    }
+  };
+
+  const resetScan = async () => {
+    setScanResult(null);
+    setValidationResult(null);
+    setWeight('');
+    setError('');
+    setVendorSubmissions([]);
+    setVendorSubmissionsError('');
+    setSelectedVendorSubmissionId('');
+    setSelectedVendorSubmission(null);
+    setProductDetailsUnlocked(false);
+    setConnectionMode('manual');
+    setBluetoothConnected(false);
+    setWifiConnected(false);
+    setIsNewProduct(false);
+    setPartNoInput('');
+
+    bluetoothScale.disconnect();
+    wifiScale.disconnect();
+
+    isScanningRef.current = false;
+
+    // Stop existing camera
     await safeStopScanner();
-    handleScan(partNoInput);
-  }
-};
 
- const resetScan = async () => {
-  setScanResult(null);
-  setValidationResult(null);
-  setWeight('');
-  setError('');
-  setVendorSubmissions([]);
-  setVendorSubmissionsError('');
-  setSelectedVendorSubmissionId('');
-  setSelectedVendorSubmission(null);
-  setProductDetailsUnlocked(false);
-  setConnectionMode('manual');
-  setBluetoothConnected(false);
-  setWifiConnected(false);
-  setIsNewProduct(false);
-  setPartNoInput('');
+    // Clear DOM container
+    const el = document.getElementById(scannerContainerId);
+    if (el) {
+      el.innerHTML = '';
+    }
 
-  bluetoothScale.disconnect();
-  wifiScale.disconnect();
-
-  isScanningRef.current = false;
-
-  // Stop existing camera
-  await safeStopScanner();
-
-  // Clear DOM container
-  const el = document.getElementById(scannerContainerId);
-  if (el) {
-    el.innerHTML = '';
-  }
-
-  // Small delay ensures DOM is ready
-  setTimeout(() => {
-    startScanner();
-  }, 300);
-};
+    // Small delay ensures DOM is ready
+    setTimeout(() => {
+      startScanner();
+    }, 300);
+  };
   const handleCreateDemo = async () => {
     if (!scanResult.partDescription || !scanResult.unitWeight || scanResult.toleranceWeight === '' || !scanResult.totalCount) {
       setError('Please fill all fields');
@@ -419,384 +521,455 @@ const safeStopScanner = useCallback(async () => {
     }
   };
   useEffect(() => {
-  startScanner();
+    startScanner();
 
-  return () => {
-    safeStopScanner();
+    return () => {
+      safeStopScanner();
 
-    bluetoothScale.disconnect();
-    wifiScale.disconnect();
-  };
-}, [startScanner, safeStopScanner]);
+      bluetoothScale.disconnect();
+      wifiScale.disconnect();
+    };
+  }, [startScanner, safeStopScanner]);
 
   const showVendorReview = scanResult && !isNewProduct && shouldReviewVendorSubmissions && !productDetailsUnlocked;
 
+  useEffect(() => {
+    if (
+      scanResult?.partNo &&
+      shouldReviewVendorSubmissions
+    ) {
+      loadVendorSubmissions(scanResult.partNo);
+    }
+  }, []);
+
+  const getEffectiveOverallWeight = () => {
+
+    // Vendor override values
+    const unitWeight =
+      Number(vendorEditableData.unitWeight);
+
+    const count =
+      Number(vendorEditableData.totalCount);
+
+    // Fallback to demo data
+    const finalUnitWeight =
+      Number.isFinite(unitWeight)
+        ? unitWeight
+        : Number(scanResult?.unitWeight || 0);
+
+    const finalCount =
+      Number.isFinite(count)
+        ? count
+        : Number(scanResult?.totalCount || 0);
+
+    return (
+      finalUnitWeight * finalCount
+    ).toFixed(3);
+  };
+
   return (
     <>
-    <div
-      className="quantix-scanner"
-      onMouseDown={(e) => {
-        // Prevent an invisible html5-qrcode input from keeping focus when user clicks on blank page/body.
-        if (e.target === e.currentTarget) {
-          document.activeElement?.blur?.();
-        }
-      }}
-    >
-      <h1 className="quantix-scanner__title">Product Scanner</h1>
+      <div
+        className="quantix-scanner"
+        onMouseDown={(e) => {
+          // Prevent an invisible html5-qrcode input from keeping focus when user clicks on blank page/body.
+          if (e.target === e.currentTarget) {
+            document.activeElement?.blur?.();
+          }
+        }}
+      >
+        <h1 className="quantix-scanner__title">Product Scanner</h1>
 
-      {!scanResult && (
-        <>
-          <div className="quantix-scanner__card quantix-scanner__card--center">
-            <div id={scannerContainerId} className="quantix-scanner__qr-container" />
-            {!scannerReady && !error && <p>Initializing camera...</p>}
-          </div>
-
-          <div className="quantix-scanner__card">
-            <h3 className="quantix-scanner__section-title">Or Enter Part No Manually</h3>
-            <form onSubmit={handleManualPartNo} className="quantix-scanner__form">
-              <input
-                name="partNo"
-                value={partNoInput}
-                onChange={(e) => setPartNoInput(e.target.value.toUpperCase())}
-                placeholder="Enter Part No"
-                className="quantix-scanner__input"
-              />
-              <button type="submit" className="quantix-scanner__button">
-                Search
-              </button>
-            </form>
-          </div>
-        </>
-      )}
-
-      {error && (
-        <div className="quantix-scanner__card quantix-scanner__card--error">
-          {error}
-          <button onClick={resetScan} className="quantix-scanner__button--reset">
-            Reset
-          </button>
-        </div>
-      )}
-      <br></br>
-      {showVendorReview && (
-        <div className="quantix-scanner__card quantix-scanner__vendor-review">
-          <div className="quantix-scanner__product-header">
-            <div>
-              <h3 className="quantix-scanner__product-title">Vendor Submissions</h3>
-              <div className="quantix-scanner__vendor-part">Part No: {scanResult.partNo}</div>
+        {!scanResult && (
+          <>
+            <div className="quantix-scanner__card quantix-scanner__card--center">
+              <div id={scannerContainerId} className="quantix-scanner__qr-container" />
+              {!scannerReady && !error && <p>Initializing camera...</p>}
             </div>
-            <button onClick={resetScan} className="quantix-scanner__button--small-gray">
-              New Scan
+
+            <div className="quantix-scanner__card">
+              <h3 className="quantix-scanner__section-title">Or Enter Part No Manually</h3>
+              <form onSubmit={handleManualPartNo} className="quantix-scanner__form">
+                <input
+                  name="partNo"
+                  value={partNoInput}
+                  onChange={(e) => setPartNoInput(e.target.value.toUpperCase())}
+                  placeholder="Enter Part No"
+                  className="quantix-scanner__input"
+                />
+                <button type="submit" className="quantix-scanner__button">
+                  Search
+                </button>
+              </form>
+            </div>
+          </>
+        )}
+
+        {error && (
+          <div className="quantix-scanner__card quantix-scanner__card--error">
+            {error}
+            <button onClick={resetScan} className="quantix-scanner__button--reset">
+              Reset
             </button>
           </div>
-
-          {vendorSubmissionsLoading ? (
-            <div className="quantix-scanner__vendor-empty">Loading vendor submissions...</div>
-          ) : vendorSubmissionsError ? (
-            <div className="quantix-scanner__vendor-error">{vendorSubmissionsError}</div>
-          ) : vendorSubmissions.length === 0 ? (
-            <div className="quantix-scanner__vendor-empty">
-              No vendor has submitted this part number yet.
-            </div>
-          ) : (
-            <div className="quantix-scanner__vendor-list">
-              {vendorSubmissions.map((vendor) => (
-                <label
-                  key={getVendorSubmissionId(vendor)}
-                  className={`quantix-scanner__vendor-item ${selectedVendorSubmissionId === getVendorSubmissionId(vendor) ? 'quantix-scanner__vendor-item--selected' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="vendorSubmission"
-                    value={getVendorSubmissionId(vendor)}
-                    checked={selectedVendorSubmissionId === getVendorSubmissionId(vendor)}
-                    onChange={() => setSelectedVendorSubmissionId(getVendorSubmissionId(vendor))}
-                    className="quantix-scanner__vendor-radio"
-                  />
-                  <div>
-                    <div className="quantix-scanner__vendor-name">{vendor.vendorName}</div>
-                    <div className="quantix-scanner__vendor-meta">
-                      {vendor.vendorCode ? `Vendor ID: ${vendor.vendorCode}` : 'Vendor ID: N/A'}
-                    </div>
-                    <div className="quantix-scanner__vendor-weight">
-                      Overall Weight Recorded: {formatWeight(vendor.overallWeight ?? vendor.measuredWeight)}
-                    </div>
-                  </div>
-                  <div className="quantix-scanner__vendor-stats">
-                    <span>{vendor.scanCount} submission{vendor.scanCount === 1 ? '' : 's'}</span>
-                    <span>{new Date(vendor.submittedAt).toLocaleString()}</span>
-                  </div>
-                </label>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={handleContinueToProductDetails}
-            className="quantix-scanner__button--validate"
-            disabled={vendorSubmissionsLoading || (vendorSubmissions.length > 0 && !selectedVendorSubmissionId)}
-          >
-            Continue to Product Details
-          </button>
-        </div>
-      )}
-
-      {scanResult && !showVendorReview && (
-        <div className="quantix-scanner__scan-grid">
-          <div className="quantix-scanner__scan-grid-main">
-            <div className="quantix-scanner__card">
-              <div className="quantix-scanner__product-header">
-                <h3 className="quantix-scanner__product-title">{isNewProduct ? 'Create Demo Data' : 'Product Details'}</h3>
-                <button onClick={resetScan} className="quantix-scanner__button--small-gray">
-                  New Scan
-                </button>
+        )}
+        <br></br>
+        {showVendorReview && (
+          <div className="quantix-scanner__card quantix-scanner__vendor-review">
+            <div className="quantix-scanner__product-header">
+              <div>
+                <h3 className="quantix-scanner__product-title">Vendor Submissions</h3>
+                <div className="quantix-scanner__vendor-part">Part No: {scanResult.partNo}</div>
               </div>
-
-            <table className="quantix-scanner__table">
-              <thead>
-                <tr>
-                  <th>Part No</th>
-                  <th>Description</th>
-                  <th>Unit Weight</th>
-                  <th>Tolerance Weight</th>
-                  {isNewProduct && <th>Total Count</th>}
-                  {!isNewProduct && <th>Total Ideal Product Count</th>}
-                  {!isNewProduct && <th>Overall Weight</th>}
-                  {!isNewProduct && <th>Weight</th>}
-                  {!isNewProduct && <th>Final Validation Status</th>}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="quantix-scanner__part-no">{scanResult.partNo}</td>
-                  <td>
-                    {isNewProduct ? (
-                      <input
-                        type="text"
-                        value={scanResult.partDescription}
-                        onChange={(e) => setScanResult({ ...scanResult, partDescription: e.target.value })}
-                        placeholder="Enter description"
-                        className="quantix-scanner__input"
-                      />
-                    ) : (
-                      scanResult.partDescription
-                    )}
-                  </td>
-                  <td>
-                    {isNewProduct ? (
-                      <input
-                        type="number"
-                        step="0.001"
-                        value={scanResult.unitWeight}
-                        onChange={(e) => setScanResult({ ...scanResult, unitWeight: e.target.value })}
-                        placeholder="kg"
-                        className="quantix-scanner__input"
-                      />
-                    ) : (
-                      `${parseFloat(scanResult.unitWeight).toFixed(3)} kg`
-                    )}
-                  </td>
-                  <td>
-                    {isNewProduct ? (
-                      <input
-                        type="number"
-                        step="0.001"
-                        value={scanResult.toleranceWeight}
-                        onChange={(e) => setScanResult({ ...scanResult, toleranceWeight: e.target.value })}
-                        placeholder="kg"
-                        className="quantix-scanner__input"
-                        min="0"
-                      />
-                    ) : (
-                      `${parseFloat(scanResult.toleranceWeight ?? 0).toFixed(3)} kg`
-                    )}
-                  </td>
-                  
-                  {isNewProduct && (
-                    <td>
-                      <input
-                        type="number"
-                        value={scanResult.totalCount}
-                        onChange={(e) => setScanResult({ ...scanResult, totalCount: e.target.value })}
-                        placeholder="Count"
-                        className="quantix-scanner__input"
-                        min="1"
-                      />
-                    </td>
-                  )}
-                  {!isNewProduct && (
-                    <td>{scanResult.totalCount}</td>
-                  )}
-                  {!isNewProduct && (
-                    <td>{scanResult.unitWeight * scanResult.totalCount}</td>
-                  )}
-                  {!isNewProduct && (
-                    <td className={weight ? 'quantix-scanner__weight-value' : 'quantix-scanner__weight-placeholder'}>
-                      {weight ? `${parseFloat(weight).toFixed(2)} kg` : '-'}
-                    </td>
-                  )}
-                  {!isNewProduct && (
-                    <td>
-                      {validationResult?.finalValidationStatus ? (
-                        <span className={`quantix-scanner__final-status quantix-scanner__final-status--${validationResult.finalValidationStatus}`}>
-                          {getFinalValidationDisplay()}
-                        </span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                  )}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div className="quantix-scanner__card">
-            {isNewProduct ? (
-              <button
-                onClick={handleCreateDemo}
-                disabled={loading}
-                className="quantix-scanner__button--validate"
-              >
-                {loading ? 'Creating...' : 'Create Demo Data'}
+              <button onClick={resetScan} className="quantix-scanner__button--small-gray">
+                New Scan
               </button>
+            </div>
+
+            {vendorSubmissionsLoading ? (
+              <div className="quantix-scanner__vendor-empty">Loading vendor submissions...</div>
+            ) : vendorSubmissionsError ? (
+              <div className="quantix-scanner__vendor-error">{vendorSubmissionsError}</div>
+            ) : vendorSubmissions.length === 0 ? (
+              <div className="quantix-scanner__vendor-empty">
+                No vendor has submitted this part number yet.
+              </div>
             ) : (
-              <>
-                <h3 className="quantix-scanner__section-title">Weight Input</h3>
-                {selectedVendorSubmission && (
-                  <div className="quantix-scanner__reference-weight">
-                    <span>Cross-checking vendor weight</span>
-                    <strong>{formatWeight(selectedVendorSubmission.overallWeight ?? selectedVendorSubmission.measuredWeight)}</strong>
-                  </div>
-                )}
-                <div className="quantix-scanner__mode-buttons">
-                  <button onClick={() => handleModeChange('manual')} className={`quantix-scanner__mode-btn ${connectionMode === 'manual' ? 'quantix-scanner__mode-btn--active' : ''}`}>Manual</button>
-                  <button onClick={() => handleModeChange('bluetooth')} className={`quantix-scanner__mode-btn ${connectionMode === 'bluetooth' ? 'quantix-scanner__mode-btn--active' : ''}`}>Bluetooth</button>
-                  <button onClick={() => handleModeChange('wifi')} className={`quantix-scanner__mode-btn ${connectionMode === 'wifi' ? 'quantix-scanner__mode-btn--active' : ''}`}>WiFi</button>
+              <div className="quantix-scanner__vendor-list">
+                {vendorSubmissions.map((vendor) => (
+                  <label
+                    key={getVendorSubmissionId(vendor)}
+                    className={`quantix-scanner__vendor-item ${selectedVendorSubmissionId === getVendorSubmissionId(vendor) ? 'quantix-scanner__vendor-item--selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="vendorSubmission"
+                      value={getVendorSubmissionId(vendor)}
+                      checked={selectedVendorSubmissionId === getVendorSubmissionId(vendor)}
+                      onChange={() => setSelectedVendorSubmissionId(getVendorSubmissionId(vendor))}
+                      className="quantix-scanner__vendor-radio"
+                    />
+                    <div>
+                      <div className="quantix-scanner__vendor-name">{vendor.vendorName}</div>
+                      <div className="quantix-scanner__vendor-meta">
+                        {vendor.vendorCode ? `Vendor ID: ${vendor.vendorCode}` : 'Vendor ID: N/A'}
+                      </div>
+                      <div className="quantix-scanner__vendor-weight">
+                        Overall Weight Recorded: {formatWeight(vendor.overallWeight ?? vendor.measuredWeight)}
+                      </div>
+                    </div>
+                    <div className="quantix-scanner__vendor-stats">
+
+                      <span>
+                        Submitted:
+                        <strong> {vendor.submittedCount || 0}</strong>
+                      </span>
+
+                      <span>
+                        Reviewed:
+                        <strong> {vendor.reviewedCount || 0}</strong>
+                      </span>
+
+                      <span>
+                        Remaining:
+                        <strong className="quantix-scanner__remaining-count">
+                          {' '}
+                          {vendor.remainingReviewCount || 0}
+                        </strong>
+                      </span>
+
+                      <span>
+                        {new Date(vendor.createdAt || vendor.submittedAt)
+                          .toLocaleString()}
+                      </span>
+
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={handleContinueToProductDetails}
+              className="quantix-scanner__button--validate"
+              disabled={vendorSubmissionsLoading || (vendorSubmissions.length > 0 && !selectedVendorSubmissionId)}
+            >
+              Continue to Product Details
+            </button>
+          </div>
+        )}
+
+        {scanResult && !showVendorReview && (
+          <div className="quantix-scanner__scan-grid">
+            <div className="quantix-scanner__scan-grid-main">
+              <div className="quantix-scanner__card">
+                <div className="quantix-scanner__product-header">
+                  <h3 className="quantix-scanner__product-title">{isNewProduct ? 'Create Demo Data' : 'Product Details'}</h3>
+                  <button onClick={resetScan} className="quantix-scanner__button--small-gray">
+                    New Scan
+                  </button>
                 </div>
 
-                {connectionMode === 'manual' && (() => {
-                  const live = getLiveWeightStatus();
-                  const kind = live?.kind;
-                  const diff = live?.displayDiff ?? 0;
-                  const diffText = live ? (diff === 0 ? '0' : `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`) : '';
-                  const inputBorderClass = kind === 'match'
-                    ? 'quantix-scanner__weight-input-wrapper--matched'
-                    : kind === 'excess'
-                      ? 'quantix-scanner__weight-input-wrapper--excess'
-                      : kind === 'short'
-                        ? 'quantix-scanner__weight-input-wrapper--short'
-                        : '';
+                <table className="quantix-scanner__table">
+                  <thead>
+                    <tr>
+                      <th>Part No</th>
+                      <th>Description</th>
+                      <th>Unit Weight</th>
+                      <th>Tolerance Weight</th>
+                      {isNewProduct && <th>Total Count</th>}
+                      {!isNewProduct && <th>Total Ideal Product Count</th>}
+                      {!isNewProduct && <th>Overall Weight</th>}
+                      {!isNewProduct && <th>Weight</th>}
+                      {!isNewProduct && <th>Final Validation Status</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="quantix-scanner__part-no">{scanResult.partNo}</td>
+                      <td>
+                        {isNewProduct ? (
+                          <input
+                            type="text"
+                            value={scanResult.partDescription}
+                            onChange={(e) => setScanResult({ ...scanResult, partDescription: e.target.value })}
+                            placeholder="Enter description"
+                            className="quantix-scanner__input"
+                          />
+                        ) : (
+                          scanResult.partDescription
+                        )}
+                      </td>
+                      <td>
+                        {isNewProduct ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={scanResult.unitWeight}
+                            onChange={(e) => setScanResult({ ...scanResult, unitWeight: e.target.value })}
+                            placeholder="kg"
+                            className="quantix-scanner__input"
+                          />
+                        ) : (
+                          `${parseFloat(scanResult.unitWeight).toFixed(3)} kg`
+                        )}
+                      </td>
+                      <td>
+                        {isNewProduct ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={scanResult.toleranceWeight}
+                            onChange={(e) => setScanResult({ ...scanResult, toleranceWeight: e.target.value })}
+                            placeholder="kg"
+                            className="quantix-scanner__input"
+                            min="0"
+                          />
+                        ) : (
+                          `${parseFloat(scanResult.toleranceWeight ?? 0).toFixed(3)} kg`
+                        )}
+                      </td>
 
-                  return (
-                    <div className={`quantix-scanner__weight-input-wrapper ${inputBorderClass}`}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Weight in kg"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        className="quantix-scanner__weight-input"
-                      />
-                      {live ? (
-                        <div className="quantix-scanner__weight-input-adornment">
-                          {diffText}
-                        </div>
-                      ) : null}
+                      {isNewProduct && (
+                        <td>
+                          <input
+                            type="number"
+                            value={scanResult.totalCount}
+                            onChange={(e) => setScanResult({ ...scanResult, totalCount: e.target.value })}
+                            placeholder="Count"
+                            className="quantix-scanner__input"
+                            min="1"
+                          />
+                        </td>
+                      )}
+                      {!isNewProduct && (
+                        <td>{scanResult.totalCount}</td>
+                      )}
+                      {!isNewProduct && (
+                        <td>{getEffectiveOverallWeight()} kg</td>
+                      )}
+                      {!isNewProduct && (
+                        <td className={weight ? 'quantix-scanner__weight-value' : 'quantix-scanner__weight-placeholder'}>
+                          {weight ? `${parseFloat(weight).toFixed(2)} kg` : '-'}
+                        </td>
+                      )}
+                      {!isNewProduct && (
+                        <td>
+                          {validationResult?.finalValidationStatus ? (
+                            <span className={`quantix-scanner__final-status quantix-scanner__final-status--${validationResult.finalValidationStatus}`}>
+                              {getFinalValidationDisplay()}
+                            </span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="quantix-scanner__card">
+                {isNewProduct ? (
+                  <button
+                    onClick={handleCreateDemo}
+                    disabled={loading}
+                    className="quantix-scanner__button--validate"
+                  >
+                    {loading ? 'Creating...' : 'Create Demo Data'}
+                  </button>
+                ) : (
+                  <>
+                    <h3 className="quantix-scanner__section-title">Weight Input</h3>
+                    {selectedVendorSubmission && (
+                      <div className="quantix-scanner__reference-weight">
+                        <span>Cross-checking vendor weight</span>
+                        <strong>{formatWeight(selectedVendorSubmission.overallWeight ?? selectedVendorSubmission.measuredWeight)}</strong>
+                      </div>
+                    )}
+                    <div className="quantix-scanner__mode-buttons">
+                      <button onClick={() => handleModeChange('manual')} className={`quantix-scanner__mode-btn ${connectionMode === 'manual' ? 'quantix-scanner__mode-btn--active' : ''}`}>Manual</button>
+                      <button onClick={() => handleModeChange('bluetooth')} className={`quantix-scanner__mode-btn ${connectionMode === 'bluetooth' ? 'quantix-scanner__mode-btn--active' : ''}`}>Bluetooth</button>
+                      <button onClick={() => handleModeChange('wifi')} className={`quantix-scanner__mode-btn ${connectionMode === 'wifi' ? 'quantix-scanner__mode-btn--active' : ''}`}>WiFi</button>
                     </div>
-                  );
-                })()}
 
-                {connectionMode === 'bluetooth' && (
-                  <div className="quantix-scanner__input-row">
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Weight in kg"
-                      value={weight}
-                      readOnly
-                      className="quantix-scanner__input quantix-scanner__input--readonly"
-                    />
-                    <button
-                      onClick={handleBluetoothConnect}
-                      className={`quantix-scanner__connect-btn ${bluetoothConnected ? 'quantix-scanner__connect-btn--bt-connected' : 'quantix-scanner__connect-btn--bt'}`}
-                    >
-                      {bluetoothConnected ? 'BT Connected' : 'Connect BT'}
-                    </button>
-                  </div>
-                )}
+                    {connectionMode === 'manual' && (() => {
+                      const live = getLiveWeightStatus();
+                      const kind = live?.kind;
+                      const diff = live?.displayDiff ?? 0;
+                      const diffText = live ? (diff === 0 ? '0' : `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`) : '';
+                      const inputBorderClass = kind === 'match'
+                        ? 'quantix-scanner__weight-input-wrapper--matched'
+                        : kind === 'excess'
+                          ? 'quantix-scanner__weight-input-wrapper--excess'
+                          : kind === 'short'
+                            ? 'quantix-scanner__weight-input-wrapper--short'
+                            : '';
 
-                {connectionMode === 'wifi' && (
-                  <div className="quantix-scanner__input-row quantix-scanner__input-row--wrap">
-                    <input
-                      type="url"
-                      placeholder="http://192.168.1.100:8080/weight"
-                      value={wifiUrl}
-                      onChange={(e) => setWifiUrl(e.target.value)}
-                      className="quantix-scanner__input"
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Weight in kg"
-                      value={weight}
-                      readOnly
-                      className="quantix-scanner__input quantix-scanner__input--readonly"
-                    />
+                      return (
+                        <div className={`quantix-scanner__weight-input-wrapper ${inputBorderClass}`}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Weight in kg"
+                            value={weight}
+                            onChange={(e) => setWeight(e.target.value)}
+                            className="quantix-scanner__weight-input"
+                          />
+                          {live ? (
+                            <div className="quantix-scanner__weight-input-adornment">
+                              {diffText}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
+
+                    {connectionMode === 'bluetooth' && (
+                      <div className="quantix-scanner__input-row">
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Weight in kg"
+                          value={weight}
+                          readOnly
+                          className="quantix-scanner__input quantix-scanner__input--readonly"
+                        />
+                        <button
+                          onClick={handleBluetoothConnect}
+                          className={`quantix-scanner__connect-btn ${bluetoothConnected ? 'quantix-scanner__connect-btn--bt-connected' : 'quantix-scanner__connect-btn--bt'}`}
+                        >
+                          {bluetoothConnected ? 'BT Connected' : 'Connect BT'}
+                        </button>
+                      </div>
+                    )}
+
+                    {connectionMode === 'wifi' && (
+                      <div className="quantix-scanner__input-row quantix-scanner__input-row--wrap">
+                        <input
+                          type="url"
+                          placeholder="http://192.168.1.100:8080/weight"
+                          value={wifiUrl}
+                          onChange={(e) => setWifiUrl(e.target.value)}
+                          className="quantix-scanner__input"
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Weight in kg"
+                          value={weight}
+                          readOnly
+                          className="quantix-scanner__input quantix-scanner__input--readonly"
+                        />
+                        <button
+                          onClick={handleWifiConnect}
+                          className={`quantix-scanner__connect-btn ${wifiConnected ? 'quantix-scanner__connect-btn--wifi-connected' : 'quantix-scanner__connect-btn--wifi'}`}
+                        >
+                          {wifiConnected ? 'WiFi Connected' : 'Connect WiFi'}
+                        </button>
+                      </div>
+                    )}
+                    <br></br>
                     <button
-                      onClick={handleWifiConnect}
-                      className={`quantix-scanner__connect-btn ${wifiConnected ? 'quantix-scanner__connect-btn--wifi-connected' : 'quantix-scanner__connect-btn--wifi'}`}
+                      onClick={handleValidate}
+                      disabled={
+                        !weight ||
+                        loading ||
+                        (
+                          selectedVendorSubmission &&
+                          selectedVendorSubmission.remainingReviewCount <= 0
+                        )
+                      }
+                      className="quantix-scanner__button--validate"
                     >
-                      {wifiConnected ? 'WiFi Connected' : 'Connect WiFi'}
+                      {loading ? 'Validating...' : 'Validate Weight'}
                     </button>
-                  </div>
+                  </>
                 )}
-                <br></br>
-                <button
-                  onClick={handleValidate}
-                  disabled={!weight || loading}
-                  className="quantix-scanner__button--validate"
-                >
-                  {loading ? 'Validating...' : 'Validate Weight'}
-                </button>
-              </>
-            )}
-          </div>
-           <br></br>
-          {validationResult && !isNewProduct && (
-            <div className={`quantix-scanner__card ${validationResult.status === 'match' ? 'quantix-scanner__card--success' : 'quantix-scanner__card--fail'}`}>
-              <div className="quantix-scanner__validation-icon">
-                {validationResult.status === 'match' ? '✅' : '❌'}
               </div>
-              <div className={`quantix-scanner__validation-status ${validationResult.status === 'match' ? 'quantix-scanner__validation-status--match' : 'quantix-scanner__validation-status--mismatch'}`}>
-                {(() => {
-                  if (validationResult.status === 'match') return 'MATCH';
-                  if (validationResult.measuredWeight > validationResult.expectedWeight) return 'OVERWEIGHT';
-                  return 'UNDERWEIGHT';
-                })()}
-              </div>
-              <div className="quantix-scanner__validation-detail">
-                Measured: {validationResult.measuredWeight} kg
-              </div>
-              <div className="quantix-scanner__validation-detail">
-                Expected: {validationResult.expectedWeight} kg
-              </div>
-              <div className="quantix-scanner__validation-detail">
-                Tolerance: {validationResult.toleranceWeight} kg
-              </div>
-              <div className="quantix-scanner__validation-detail">
-                Expected Count: {validationResult.expectedCount}
-              </div>
-              <div className="quantix-scanner__validation-detail">
-                Final Validation Status: {validationResult.finalValidationStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-              </div>
+              <br></br>
+              {validationResult && !isNewProduct && (
+                <div className={`quantix-scanner__card ${validationResult.status === 'match' ? 'quantix-scanner__card--success' : 'quantix-scanner__card--fail'}`}>
+                  <div className="quantix-scanner__validation-icon">
+                    {validationResult.status === 'match' ? '✅' : '❌'}
+                  </div>
+                  <div className={`quantix-scanner__validation-status ${validationResult.status === 'match' ? 'quantix-scanner__validation-status--match' : 'quantix-scanner__validation-status--mismatch'}`}>
+                    {(() => {
+                      if (validationResult.status === 'match') return 'MATCH';
+                      if (validationResult.measuredWeight > validationResult.expectedWeight) return 'OVERWEIGHT';
+                      return 'UNDERWEIGHT';
+                    })()}
+                  </div>
+                  <div className="quantix-scanner__validation-detail">
+                    Measured: {validationResult.measuredWeight} kg
+                  </div>
+                  <div className="quantix-scanner__validation-detail">
+                    Expected: {validationResult.expectedWeight} kg
+                  </div>
+                  <div className="quantix-scanner__validation-detail">
+                    Tolerance: {validationResult.toleranceWeight} kg
+                  </div>
+                  <div className="quantix-scanner__validation-detail">
+                    Expected Count: {validationResult.expectedCount}
+                  </div>
+                  <div className="quantix-scanner__validation-detail">
+                    Final Validation Status: {validationResult.finalValidationStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+                  </div>
+                </div>
+              )}
+              {
+                selectedVendorSubmission &&
+                selectedVendorSubmission.remainingReviewCount <= 0 && (
+                  <div className="quantix-scanner__review-complete">
+                    Review count completed for this vendor submission
+                  </div>
+                )
+              }
             </div>
-          )}
-          </div>
 
-        </div>
-      )}
-   </div>
+          </div>
+        )}
+      </div>
     </>
   );
 };

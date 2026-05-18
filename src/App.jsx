@@ -42,7 +42,8 @@ function AppRoutes() {
           <Route path="scan-logs" element={<PrivateRoute role="admin"><ScanLogs /></PrivateRoute>} />
         </Route>
         <Route path="scan" element={<PrivateRoute role="employee"><Scanner /></PrivateRoute>} />
-        <Route path="history" element={<PrivateRoute role="employee"><ScanHistory /></PrivateRoute>} />
+        <Route path="history" element={<PrivateRoute><ScanHistory /></PrivateRoute>} />
+
         <Route path="profile" element={<PrivateRoute role="employee"><Profile /></PrivateRoute>} />
         <Route path="footer" element={<Footer/>} />
       </Route>

@@ -26,7 +26,7 @@ const Layout = () => {
               </>
             )}
 
-            {user?.role === 'employee' && (
+            {(user?.role === 'employee' || user?.role === 'vendor' || user?.employeeType === 'vendor') && (
               <>
                 <Link
                   to="/"

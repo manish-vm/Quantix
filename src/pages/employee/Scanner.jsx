@@ -26,12 +26,13 @@ const Scanner = () => {
   const [error, setError] = useState('');
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [partNoInput, setPartNoInput] = useState('');
-  const [vendorEditableData, setVendorEditableData] =
-    useState({
-      unitWeight: '',
-      toleranceWeight: '',
-      totalCount: ''
-    });
+  const [vendorEditableData, setVendorEditableData] = useState({
+    unitWeight: '',
+    toleranceWeight: '',
+    totalCount: ''
+  });
+  const [isVendorEditing, setIsVendorEditing] = useState(false);
+  const [originalVendorData, setOriginalVendorData] = useState(null);
   const scannerRef = useRef(null);
   const scannerContainerId = 'qr-reader';
 
@@ -106,6 +107,14 @@ const Scanner = () => {
           res.data.toleranceWeight || '',
         totalCount: res.data.totalCount || ''
       });
+
+      setOriginalVendorData({
+        unitWeight: res.data.unitWeight || '',
+        toleranceWeight:
+          res.data.toleranceWeight || '',
+        totalCount: res.data.totalCount || ''
+      });
+
       setIsNewProduct(false);
       await loadVendorSubmissions(upperPartNo);
     } catch (err) {
@@ -261,28 +270,88 @@ const Scanner = () => {
   };
 
   const getLiveWeightStatus = () => {
+
     if (!scanResult) return null;
-    // Backend uses unitWeight/toleranceWeight on demo-data response.
-    // Some responses may also include expectedWeight; support both.
-    //const expectedValue = scanResult.expectedWeight ?? (scanResult.unitWeight * scanResult.totalCount);
-    const selectedReferenceWeight = selectedVendorSubmission?.overallWeight ?? selectedVendorSubmission?.measuredWeight;
-    const expected = selectedReferenceWeight ?? scanResult.expectedWeight ?? (scanResult.unitWeight * scanResult.totalCount);
+
     const measured = parseWeightNumber(weight);
-    if (expected === null || measured === null) return null;
+
+    if (measured === null) return null;
+
+    // Vendor edited overall weight
+    const editedOverallWeight =
+      Number(getEffectiveOverallWeight());
+
+    // Employee selected vendor submission weight
+    const selectedReferenceWeight =
+      selectedVendorSubmission?.overallWeight ??
+      selectedVendorSubmission?.measuredWeight;
+
+    // FINAL expected weight
+    const expected =
+      user?.role === 'vendor'
+        ? editedOverallWeight
+        : (
+          selectedReferenceWeight ??
+          scanResult.expectedWeight ??
+          (
+            scanResult.unitWeight *
+            scanResult.totalCount
+          )
+        );
+
+    if (expected === null) return null;
 
     const diff = measured - expected;
 
-    if (selectedReferenceWeight !== undefined && selectedReferenceWeight !== null) {
-      if (diff === 0) return { kind: 'match', displayDiff: 0 };
+    // Employee validation against vendor exact weight
+    if (
+      selectedReferenceWeight !== undefined &&
+      selectedReferenceWeight !== null
+    ) {
+
+      if (diff === 0) {
+        return {
+          kind: 'match',
+          displayDiff: 0
+        };
+      }
+
     } else {
-      const toleranceRaw = scanResult.toleranceWeight ?? 0;
-      const tolerance = parseWeightNumber(toleranceRaw);
-      const safeTolerance = tolerance === null ? 0 : tolerance;
-      if (Math.abs(diff) <= safeTolerance) return { kind: 'match', displayDiff: 0 };
+
+      const toleranceRaw =
+        user?.role === 'vendor'
+          ? vendorEditableData.toleranceWeight
+          : (scanResult.toleranceWeight ?? 0);
+
+      const tolerance =
+        parseWeightNumber(toleranceRaw);
+
+      const safeTolerance =
+        tolerance === null ? 0 : tolerance;
+
+      if (Math.abs(diff) <= safeTolerance) {
+
+        return {
+          kind: 'match',
+          displayDiff: 0
+        };
+
+      }
     }
 
-    if (diff > 0) return { kind: 'excess', displayDiff: diff };
-    return { kind: 'short', displayDiff: diff };
+    if (diff > 0) {
+
+      return {
+        kind: 'excess',
+        displayDiff: diff
+      };
+
+    }
+
+    return {
+      kind: 'short',
+      displayDiff: diff
+    };
   };
 
   const handleValidate = async () => {
@@ -298,7 +367,25 @@ const Scanner = () => {
 
       const payload = {
         partNo: scanResult.partNo,
-        measuredWeight: parseFloat(weight)
+        measuredWeight: parseFloat(weight),
+
+        vendorOverrideData: {
+          unitWeight: Number(
+            vendorEditableData.unitWeight
+          ),
+
+          toleranceWeight: Number(
+            vendorEditableData.toleranceWeight
+          ),
+
+          totalCount: Number(
+            vendorEditableData.totalCount
+          ),
+
+          overallWeight: Number(
+            getEffectiveOverallWeight()
+          )
+        }
       };
 
       if (
@@ -621,10 +708,62 @@ const Scanner = () => {
                 <h3 className="quantix-scanner__product-title">Vendor Submissions</h3>
                 <div className="quantix-scanner__vendor-part">Part No: {scanResult.partNo}</div>
               </div>
-              <button onClick={resetScan} className="quantix-scanner__button--small-gray">
+              <button onClick={resetScan} className="quantix-scanner__button--edit">
                 New Scan
               </button>
             </div>
+
+            {user?.role === 'vendor' &&
+              !isNewProduct && (
+                <div className="quantix-scanner__vendor-edit-actions">
+
+                  {!isVendorEditing ? (
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOriginalVendorData({
+                          ...vendorEditableData
+                        });
+
+                        setIsVendorEditing(true);
+                      }}
+                      className="quantix-scanner__button--edit"
+                    >
+                      Edit
+                    </button>
+
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsVendorEditing(false);
+                        }}
+                        className="quantix-scanner__button--validate"
+                      >
+                        Save
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+
+                          setVendorEditableData({
+                            ...originalVendorData
+                          });
+
+                          setIsVendorEditing(false);
+
+                        }}
+                        className="quantix-scanner__button--edit"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
 
             {vendorSubmissionsLoading ? (
               <div className="quantix-scanner__vendor-empty">Loading vendor submissions...</div>
@@ -704,10 +843,74 @@ const Scanner = () => {
             <div className="quantix-scanner__scan-grid-main">
               <div className="quantix-scanner__card">
                 <div className="quantix-scanner__product-header">
-                  <h3 className="quantix-scanner__product-title">{isNewProduct ? 'Create Demo Data' : 'Product Details'}</h3>
-                  <button onClick={resetScan} className="quantix-scanner__button--small-gray">
-                    New Scan
-                  </button>
+
+                  <h3 className="quantix-scanner__product-title">
+                    {isNewProduct ? 'Create Demo Data' : 'Product Details'}
+                  </h3>
+
+                  <div className="quantix-scanner__header-actions">
+
+                    {user?.role === 'vendor' && !isNewProduct && (
+
+                      !isVendorEditing ? (
+
+                        <button
+                          type="button"
+                          onClick={() => setIsVendorEditing(true)}
+                          className="quantix-scanner__button--edit"
+                        >
+                          Edit
+                        </button>
+
+                      ) : (
+
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+
+                              setIsVendorEditing(false);
+
+                              setOriginalVendorData({
+                                ...vendorEditableData
+                              });
+
+                            }}
+                            className="quantix-scanner__button--validate"
+                          >
+                            Save
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+
+                              setVendorEditableData({
+                                ...originalVendorData
+                              });
+
+                              setIsVendorEditing(false);
+
+                            }}
+                            className="quantix-scanner__button--edit"
+                          >
+                            Cancel
+                          </button>
+                        </>
+
+                      )
+
+                    )}
+
+                    <button
+                      onClick={resetScan}
+                      className="quantix-scanner__button--edit"
+                    >
+                      New Scan
+                    </button>
+
+                  </div>
+
                 </div>
 
                 <table className="quantix-scanner__table">
@@ -726,13 +929,21 @@ const Scanner = () => {
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="quantix-scanner__part-no">{scanResult.partNo}</td>
+                      <td className="quantix-scanner__part-no">
+                        {scanResult.partNo}
+                      </td>
+
                       <td>
                         {isNewProduct ? (
                           <input
                             type="text"
                             value={scanResult.partDescription}
-                            onChange={(e) => setScanResult({ ...scanResult, partDescription: e.target.value })}
+                            onChange={(e) =>
+                              setScanResult({
+                                ...scanResult,
+                                partDescription: e.target.value
+                              })
+                            }
                             placeholder="Enter description"
                             className="quantix-scanner__input"
                           />
@@ -740,63 +951,140 @@ const Scanner = () => {
                           scanResult.partDescription
                         )}
                       </td>
+
+                      {/* UNIT WEIGHT */}
                       <td>
-                        {isNewProduct ? (
+                        {user?.role === 'vendor' &&
+                          !isNewProduct &&
+                          isVendorEditing ? (
                           <input
                             type="number"
                             step="0.001"
-                            value={scanResult.unitWeight}
-                            onChange={(e) => setScanResult({ ...scanResult, unitWeight: e.target.value })}
-                            placeholder="kg"
+                            value={vendorEditableData.unitWeight}
+                            onChange={(e) =>
+                              setVendorEditableData((prev) => ({
+                                ...prev,
+                                unitWeight: e.target.value
+                              }))
+                            }
                             className="quantix-scanner__input"
                           />
                         ) : (
-                          `${parseFloat(scanResult.unitWeight).toFixed(3)} kg`
-                        )}
-                      </td>
-                      <td>
-                        {isNewProduct ? (
-                          <input
-                            type="number"
-                            step="0.001"
-                            value={scanResult.toleranceWeight}
-                            onChange={(e) => setScanResult({ ...scanResult, toleranceWeight: e.target.value })}
-                            placeholder="kg"
-                            className="quantix-scanner__input"
-                            min="0"
-                          />
-                        ) : (
-                          `${parseFloat(scanResult.toleranceWeight ?? 0).toFixed(3)} kg`
+                          isVendorEditing ? (
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={vendorEditableData.unitWeight}
+                              onChange={(e) =>
+                                setVendorEditableData({
+                                  ...vendorEditableData,
+                                  unitWeight: e.target.value
+                                })
+                              }
+                              className="quantix-scanner__input"
+                            />
+                          ) : (
+                            `${parseFloat(
+                              vendorEditableData.unitWeight || scanResult.unitWeight
+                            ).toFixed(3)} kg`
+                          )
                         )}
                       </td>
 
-                      {isNewProduct && (
+                      {/* TOLERANCE */}
+                      <td>
+                        {user?.role === 'vendor' &&
+                          !isNewProduct &&
+                          isVendorEditing ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={vendorEditableData.toleranceWeight}
+                            onChange={(e) =>
+                              setVendorEditableData({
+                                ...vendorEditableData,
+                                toleranceWeight: e.target.value
+                              })
+                            }
+                            className="quantix-scanner__input"
+                          />
+                        ) : (
+                          `${parseFloat(
+                            vendorEditableData.toleranceWeight ||
+                            scanResult.toleranceWeight ||
+                            0
+                          ).toFixed(3)} kg`
+
+                        )}
+                      </td>
+
+                      {/* TOTAL COUNT */}
+                      {isNewProduct ? (
                         <td>
                           <input
                             type="number"
                             value={scanResult.totalCount}
-                            onChange={(e) => setScanResult({ ...scanResult, totalCount: e.target.value })}
+                            onChange={(e) =>
+                              setScanResult({
+                                ...scanResult,
+                                totalCount: e.target.value
+                              })
+                            }
                             placeholder="Count"
                             className="quantix-scanner__input"
                             min="1"
                           />
                         </td>
-                      )}
-                      {!isNewProduct && (
-                        <td>{scanResult.totalCount}</td>
-                      )}
-                      {!isNewProduct && (
-                        <td>{getEffectiveOverallWeight()} kg</td>
-                      )}
-                      {!isNewProduct && (
-                        <td className={weight ? 'quantix-scanner__weight-value' : 'quantix-scanner__weight-placeholder'}>
-                          {weight ? `${parseFloat(weight).toFixed(2)} kg` : '-'}
+                      ) : (
+                        <td>
+                          {user?.role === 'vendor' &&
+                            isVendorEditing ? (
+                            <input
+                              type="number"
+                              value={vendorEditableData.totalCount}
+                              onChange={(e) =>
+                                setVendorEditableData({
+                                  ...vendorEditableData,
+                                  totalCount: e.target.value
+                                })
+                              }
+                              className="quantix-scanner__input"
+                            />
+                          ) : (
+                            vendorEditableData.totalCount || scanResult.totalCount
+                          )}
                         </td>
                       )}
+
+                      {/* OVERALL WEIGHT */}
+                      {!isNewProduct && (
+                        <td>
+                          {getEffectiveOverallWeight()} kg
+                        </td>
+                      )}
+
+                      {/* LIVE WEIGHT */}
+                      {!isNewProduct && (
+                        <td
+                          className={
+                            weight
+                              ? 'quantix-scanner__weight-value'
+                              : 'quantix-scanner__weight-placeholder'
+                          }
+                        >
+                          {weight
+                            ? `${parseFloat(weight).toFixed(2)} kg`
+                            : '-'}
+                        </td>
+                      )}
+
+                      {/* FINAL STATUS */}
                       {!isNewProduct && (
                         <td>
                           {validationResult?.finalValidationStatus ? (
-                            <span className={`quantix-scanner__final-status quantix-scanner__final-status--${validationResult.finalValidationStatus}`}>
+                            <span
+                              className={`quantix-scanner__final-status quantix-scanner__final-status--${validationResult.finalValidationStatus}`}
+                            >
                               {getFinalValidationDisplay()}
                             </span>
                           ) : (

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: ' https://quantix-backend-2w1l.onrender.com/api',
+  baseURL: 'https://quantix-backend-2w1l.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }

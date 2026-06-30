@@ -18,23 +18,41 @@ const ScanLogs = () => {
     return parseFloat(value).toFixed(2);
   };
 
-  const getStatusCount = (log) => {
+  const getStatusCountValue = (log) => {
     const unitWeight = Number(log.unitWeight);
     const overallWeight = Number(log.overallWeight);
     const receivedWeight = Number(log.receivedWeight);
 
     if (!Number.isFinite(unitWeight) || unitWeight <= 0 || !Number.isFinite(overallWeight) || !Number.isFinite(receivedWeight)) {
-      return '-';
+      return null;
     }
 
     const diff = receivedWeight - overallWeight;
-    if (diff === 0) return '0';
+    if (diff === 0) return 0;
 
     const countDiff = diff / unitWeight;
     const roundedCount = Math.round(Math.abs(countDiff));
-    if (roundedCount === 0) return '0';
+    if (roundedCount === 0) return 0;
 
-    return `${diff > 0 ? '+' : '-'}${roundedCount}`;
+    return diff > 0 ? roundedCount : -roundedCount;
+  };
+
+  const getStatusCount = (log) => {
+    const statusCount = getStatusCountValue(log);
+    if (statusCount === null) return '-';
+    if (statusCount === 0) return '0';
+
+    return `${statusCount > 0 ? '+' : ''}${statusCount}`;
+  };
+
+  const getProductDelay = (log) => {
+    const statusCount = getStatusCountValue(log);
+    return statusCount !== null && statusCount < 0 ? Math.abs(statusCount) : null;
+  };
+
+  const getExcessProduct = (log) => {
+    const statusCount = getStatusCountValue(log);
+    return statusCount !== null && statusCount > 0 ? statusCount : null;
   };
 
   const getFinalValidationStatus = (log) => (
@@ -168,8 +186,8 @@ const ScanLogs = () => {
                   </td>
                   <td>{formatCount(log.totalIdealProductCount)}</td>
                   <td>{formatCount(log.basedOnReceivedWeightProductCount)}</td>
-                  <td>{formatCount(log.productDelay)}</td>
-                  <td>{formatCount(log.excessProduct)}</td>
+                  <td>{formatCount(getProductDelay(log))}</td>
+                  <td>{formatCount(getExcessProduct(log))}</td>
                   <td>
                     {(() => {
                       const getStatusDisplay = () => {

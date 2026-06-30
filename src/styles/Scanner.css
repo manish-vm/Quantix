@@ -389,11 +389,15 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  width: 100%;
   padding: 12px;
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   background: #fff;
+  color: inherit;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
 .quantix-scanner__vendor-item--selected {
@@ -404,6 +408,9 @@
 .quantix-scanner__vendor-radio {
   flex: 0 0 auto;
   margin-top: 3px;
+  color: #1890ff;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .quantix-scanner__vendor-name {
@@ -450,6 +457,94 @@
   background: #fff2f0;
   color: #cf1322;
   border: 1px solid #ffccc7;
+}
+
+.quantix-scanner__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.quantix-scanner__modal {
+  width: min(760px, 100%);
+  max-height: min(720px, 86vh);
+  overflow: auto;
+  padding: 20px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 60px rgba(15, 23, 42, 0.25);
+}
+
+.quantix-scanner__modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.quantix-scanner__modal-title {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 20px;
+}
+
+.quantix-scanner__modal-close {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.quantix-scanner__submission-list {
+  display: grid;
+  gap: 10px;
+}
+
+.quantix-scanner__submission-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.quantix-scanner__submission-option:hover,
+.quantix-scanner__submission-option:focus {
+  border-color: #1890ff;
+  background: #f0f7ff;
+}
+
+.quantix-scanner__submission-title {
+  color: #111827;
+  font-weight: 700;
+}
+
+.quantix-scanner__submission-details {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 14px;
+  color: #4b5563;
+  font-size: 13px;
 }
 
 .quantix-scanner__logs-container {

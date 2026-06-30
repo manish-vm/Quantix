@@ -18,6 +18,7 @@ const Scanner = () => {
   const [vendorSubmissionsError, setVendorSubmissionsError] = useState('');
   const [selectedVendorSubmissionId, setSelectedVendorSubmissionId] = useState('');
   const [selectedVendorSubmission, setSelectedVendorSubmission] = useState(null);
+  const [submissionPickerVendor, setSubmissionPickerVendor] = useState(null);
   const [productDetailsUnlocked, setProductDetailsUnlocked] = useState(false);
   const [scannerReady, setScannerReady] = useState(false);
   const [connectionMode, setConnectionMode] = useState('manual');
@@ -45,6 +46,7 @@ const Scanner = () => {
     setVendorSubmissionsError('');
     setSelectedVendorSubmissionId('');
     setSelectedVendorSubmission(null);
+    setSubmissionPickerVendor(null);
 
     if (!shouldReviewVendorSubmissions) {
       setProductDetailsUnlocked(true);
@@ -91,6 +93,7 @@ const Scanner = () => {
     setVendorSubmissionsError('');
     setSelectedVendorSubmissionId('');
     setSelectedVendorSubmission(null);
+    setSubmissionPickerVendor(null);
     setProductDetailsUnlocked(false);
     setWeight('');
     setConnectionMode('manual');
@@ -253,6 +256,57 @@ const Scanner = () => {
 
   const getVendorSubmissionId = (vendor) => String(vendor._id);
 
+  const getVendorSubmissionEntries = (vendor) => {
+    const entries = Array.isArray(vendor?.submissionEntries)
+      ? vendor.submissionEntries
+      : [];
+
+    if (entries.length > 0) return entries;
+
+    return [
+      {
+        _id: vendor._id,
+        overallWeight: vendor.overallWeight,
+        measuredWeight: vendor.measuredWeight,
+        expectedWeight: vendor.expectedWeight,
+        expectedCount: vendor.expectedCount,
+        submittedAt: vendor.createdAt || vendor.submittedAt
+      }
+    ];
+  };
+
+  const getVendorEntrySelectionId = (vendor, entry) => (
+    `${getVendorSubmissionId(vendor)}:${entry?._id || entry?.submittedAt || 'entry'}`
+  );
+
+  const buildSelectedVendorSubmission = (vendor, entry) => ({
+    ...vendor,
+    selectedEntryId: entry?._id || null,
+    selectedSubmittedAt: entry?.submittedAt || vendor.createdAt || vendor.submittedAt,
+    overallWeight: entry?.overallWeight ?? vendor.overallWeight,
+    measuredWeight: entry?.measuredWeight ?? vendor.measuredWeight,
+    expectedWeight: entry?.expectedWeight ?? vendor.expectedWeight,
+    expectedCount: entry?.expectedCount ?? vendor.expectedCount
+  });
+
+  const selectVendorSubmissionEntry = (vendor, entry) => {
+    const selected = buildSelectedVendorSubmission(vendor, entry);
+    setSelectedVendorSubmissionId(getVendorEntrySelectionId(vendor, entry));
+    setSelectedVendorSubmission(selected);
+    setSubmissionPickerVendor(null);
+  };
+
+  const handleVendorSubmissionClick = (vendor) => {
+    const entries = getVendorSubmissionEntries(vendor);
+
+    if (entries.length > 1 || vendor.submittedCount > 1) {
+      setSubmissionPickerVendor(vendor);
+      return;
+    }
+
+    selectVendorSubmissionEntry(vendor, entries[0]);
+  };
+
   const getFinalValidationDisplay = () => {
     if (!validationResult?.finalValidationStatus) return '-';
     return validationResult.finalValidationStatus === 'accepted' ? 'Accepted' : 'Rejected';
@@ -260,12 +314,6 @@ const Scanner = () => {
 
   const handleContinueToProductDetails = () => {
     if (vendorSubmissions.length > 0 && !selectedVendorSubmissionId) return;
-
-    const selectedVendor = vendorSubmissions.find(
-      (vendor) => vendor._id === selectedVendorSubmissionId
-    );
-
-    setSelectedVendorSubmission(selectedVendor || null);
     setWeight('');
     setProductDetailsUnlocked(true);
   };
@@ -630,6 +678,18 @@ const Scanner = () => {
   }, []);
 
   const getEffectiveOverallWeight = () => {
+    const selectedReferenceWeight =
+      selectedVendorSubmission?.overallWeight ??
+      selectedVendorSubmission?.measuredWeight;
+
+    if (
+      user?.role !== 'vendor' &&
+      selectedReferenceWeight !== undefined &&
+      selectedReferenceWeight !== null &&
+      selectedReferenceWeight !== ''
+    ) {
+      return Number(selectedReferenceWeight).toFixed(3);
+    }
 
     // Vendor override values
     const unitWeight =
@@ -775,26 +835,32 @@ const Scanner = () => {
               </div>
             ) : (
               <div className="quantix-scanner__vendor-list">
-                {vendorSubmissions.map((vendor) => (
-                  <label
-                    key={getVendorSubmissionId(vendor)}
-                    className={`quantix-scanner__vendor-item ${selectedVendorSubmissionId === getVendorSubmissionId(vendor) ? 'quantix-scanner__vendor-item--selected' : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="vendorSubmission"
-                      value={getVendorSubmissionId(vendor)}
-                      checked={selectedVendorSubmissionId === getVendorSubmissionId(vendor)}
-                      onChange={() => setSelectedVendorSubmissionId(getVendorSubmissionId(vendor))}
-                      className="quantix-scanner__vendor-radio"
-                    />
+                {vendorSubmissions.map((vendor) => {
+                  const entries = getVendorSubmissionEntries(vendor);
+                  const isSelected = selectedVendorSubmission?._id === vendor._id;
+
+                  return (
+                    <button
+                      type="button"
+                      key={getVendorSubmissionId(vendor)}
+                      className={`quantix-scanner__vendor-item ${isSelected ? 'quantix-scanner__vendor-item--selected' : ''}`}
+                      onClick={() => handleVendorSubmissionClick(vendor)}
+                    >
+                    <span className="quantix-scanner__vendor-radio">
+                      {isSelected ? 'Selected' : 'Choose'}
+                    </span>
                     <div>
                       <div className="quantix-scanner__vendor-name">{vendor.vendorName}</div>
                       <div className="quantix-scanner__vendor-meta">
                         {vendor.vendorCode ? `Vendor ID: ${vendor.vendorCode}` : 'Vendor ID: N/A'}
                       </div>
+                      <div className="quantix-scanner__vendor-meta">
+                        {entries.length > 1 ? `${entries.length} submitted records available` : '1 submitted record available'}
+                      </div>
                       <div className="quantix-scanner__vendor-weight">
-                        Overall Weight Recorded: {formatWeight(vendor.overallWeight ?? vendor.measuredWeight)}
+                        {isSelected
+                          ? `Selected Weight: ${formatWeight(selectedVendorSubmission.overallWeight ?? selectedVendorSubmission.measuredWeight)}`
+                          : `Latest Weight Recorded: ${formatWeight(vendor.overallWeight ?? vendor.measuredWeight)}`}
                       </div>
                     </div>
                     <div className="quantix-scanner__vendor-stats">
@@ -823,8 +889,9 @@ const Scanner = () => {
                       </span>
 
                     </div>
-                  </label>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -835,6 +902,72 @@ const Scanner = () => {
             >
               Continue to Product Details
             </button>
+          </div>
+        )}
+
+        {submissionPickerVendor && (
+          <div
+            className="quantix-scanner__modal-backdrop"
+            role="presentation"
+            onClick={() => setSubmissionPickerVendor(null)}
+          >
+            <div
+              className="quantix-scanner__modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="vendor-submission-picker-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="quantix-scanner__modal-header">
+                <div>
+                  <h3
+                    id="vendor-submission-picker-title"
+                    className="quantix-scanner__modal-title"
+                  >
+                    Select Vendor Submission
+                  </h3>
+                  <div className="quantix-scanner__vendor-meta">
+                    {submissionPickerVendor.vendorName}
+                    {submissionPickerVendor.vendorCode ? ` - ${submissionPickerVendor.vendorCode}` : ''}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="quantix-scanner__modal-close"
+                  onClick={() => setSubmissionPickerVendor(null)}
+                  aria-label="Close submission picker"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="quantix-scanner__submission-list">
+                {getVendorSubmissionEntries(submissionPickerVendor).map((entry, index) => (
+                  <button
+                    type="button"
+                    key={getVendorEntrySelectionId(submissionPickerVendor, entry)}
+                    className="quantix-scanner__submission-option"
+                    onClick={() => selectVendorSubmissionEntry(submissionPickerVendor, entry)}
+                  >
+                    <div>
+                      <div className="quantix-scanner__submission-title">
+                        Submission {index + 1}
+                      </div>
+                      <div className="quantix-scanner__vendor-meta">
+                        Submitted: {new Date(entry.submittedAt || submissionPickerVendor.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="quantix-scanner__submission-details">
+                      <span>Overall: <strong>{formatWeight(entry.overallWeight ?? entry.measuredWeight)}</strong></span>
+                      <span>Measured: <strong>{formatWeight(entry.measuredWeight)}</strong></span>
+                      <span>Count: <strong>{entry.expectedCount ?? 'N/A'}</strong></span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

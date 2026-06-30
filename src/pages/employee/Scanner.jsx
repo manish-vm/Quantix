@@ -6,6 +6,7 @@ import bluetoothScale from '../../utils/bluetooth';
 import wifiScale from '../../utils/wifi';
 import '../../styles/Scanner.css';
 
+
 const Scanner = () => {
   const { user } = useAuth();
   const [scanResult, setScanResult] = useState(null);
@@ -619,14 +620,13 @@ const Scanner = () => {
   }, [startScanner, safeStopScanner]);
 
   const showVendorReview = scanResult && !isNewProduct && shouldReviewVendorSubmissions && !productDetailsUnlocked;
-
   useEffect(() => {
     if (
       scanResult?.partNo &&
       shouldReviewVendorSubmissions
     ) {
       loadVendorSubmissions(scanResult.partNo);
-    }
+    }// eslint-disable-next-line
   }, []);
 
   const getEffectiveOverallWeight = () => {

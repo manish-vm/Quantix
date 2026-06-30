@@ -18,9 +18,13 @@ const ScanLogs = () => {
     return parseFloat(value).toFixed(2);
   };
 
+  const getDisplayOverallWeight = (log) => (
+    log.expectedWeight ?? log.overallWeight
+  );
+
   const getStatusCountValue = (log) => {
     const unitWeight = Number(log.unitWeight);
-    const overallWeight = Number(log.overallWeight);
+    const overallWeight = Number(getDisplayOverallWeight(log));
     const receivedWeight = Number(log.receivedWeight);
 
     if (!Number.isFinite(unitWeight) || unitWeight <= 0 || !Number.isFinite(overallWeight) || !Number.isFinite(receivedWeight)) {
@@ -175,7 +179,7 @@ const ScanLogs = () => {
                   <td>{log.description}</td>
                   <td>{formatWeight(log.unitWeight)}</td>
                   <td>{formatWeight(log.toleranceWeight)}</td>
-                  <td>{formatWeight(log.overallWeight)}</td>
+                  <td>{formatWeight(getDisplayOverallWeight(log))}</td>
                   <td>{formatWeight(log.receivedWeight)}</td>
                   <td>{formatWeight(log.short)}</td>
                   <td>{formatWeight(log.excess)}</td>

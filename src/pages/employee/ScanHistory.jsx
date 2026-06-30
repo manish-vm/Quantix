@@ -12,6 +12,10 @@ const EmployeeScanHistory = () => {
     return `${parseFloat(value).toFixed(2)} kg`;
   };
 
+  const getDisplayOverallWeight = (log) => (
+    log.expectedWeight ?? log.overallWeight
+  );
+
   const formatStatus = (log) => {
     if (log.status === 'match') return 'Match';
     if (log.measuredWeight > log.expectedWeight) return 'Excess';
@@ -27,7 +31,7 @@ const EmployeeScanHistory = () => {
 
   const getStatusCount = (log) => {
     const unitWeight = Number(log.unitWeight);
-    const overallWeight = Number(log.overallWeight ?? log.expectedWeight);
+    const overallWeight = Number(getDisplayOverallWeight(log));
     const receivedWeight = Number(log.measuredWeight);
 
     if (!Number.isFinite(unitWeight) || unitWeight <= 0 || !Number.isFinite(overallWeight) || !Number.isFinite(receivedWeight)) {
@@ -96,7 +100,7 @@ const EmployeeScanHistory = () => {
                   <td>{log.partDescription}</td>
                   <td>{formatWeight(log.unitWeight)}</td>
                   <td>{formatWeight(log.toleranceWeight)}</td>
-                  <td>{formatWeight(log.overallWeight)}</td>
+                  <td>{formatWeight(getDisplayOverallWeight(log))}</td>
                   <td>{formatWeight(log.measuredWeight)}</td>
                   <td>{log.totalIdealProductCount != null ? log.totalIdealProductCount : 'N/A'}</td>
                   {(() => {
@@ -120,7 +124,7 @@ const EmployeeScanHistory = () => {
                   <td className={
                     (() => {
                       const unitWeight = Number(log.unitWeight);
-                      const overallWeight = Number(log.overallWeight ?? log.expectedWeight);
+                      const overallWeight = Number(getDisplayOverallWeight(log));
                       const receivedWeight = Number(log.measuredWeight);
                       if (!Number.isFinite(unitWeight) || unitWeight <= 0 || !Number.isFinite(overallWeight) || !Number.isFinite(receivedWeight)) {
                         return 'quantix-reports__status-cell--good';

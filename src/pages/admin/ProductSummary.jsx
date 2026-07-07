@@ -31,6 +31,29 @@ const ProductSummary = () => {
     return parseFloat(value).toFixed(2);
   };
 
+  const renderReviewStatus = (review, emptyText = 'Not submitted') => {
+    if (!review) {
+      return <span className="quantix-reports__review-empty">{emptyText}</span>;
+    }
+
+    const isMismatch = review.status === 'mismatch';
+
+    return (
+      <span
+        className={`quantix-reports__review-status ${
+          isMismatch
+            ? 'quantix-reports__review-status--mismatch'
+            : 'quantix-reports__review-status--match'
+        }`}
+      >
+        <span className="quantix-reports__review-icon">
+          {isMismatch ? '✕' : '✓'}
+        </span>
+        <span>{review.name || 'Unknown'}</span>
+      </span>
+    );
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
@@ -46,6 +69,8 @@ const ProductSummary = () => {
               <th>Tolerance Weight</th>
               <th>Overall Weight</th>
               <th>Total Ideal Product Count</th>
+              <th>Vendor</th>
+              <th>Employee</th>
             </tr>
           </thead>
           <tbody>
@@ -57,11 +82,13 @@ const ProductSummary = () => {
                 <td>{formatWeight(item.toleranceWeight)}</td>
                 <td>{formatWeight(item.overallWeight)}</td>
                 <td>{formatCount(item.totalIdealProductCount)}</td>
+                <td>{renderReviewStatus(item.vendorReview)}</td>
+                <td>{renderReviewStatus(item.employeeReview, 'Not reviewed')}</td>
               </tr>
             ))}
             {productReport.length === 0 && (
               <tr>
-                <td colSpan="6" className="quantix-reports__empty">No data available</td>
+                <td colSpan="8" className="quantix-reports__empty">No data available</td>
               </tr>
             )}
           </tbody>

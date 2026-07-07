@@ -78,6 +78,47 @@
   font-weight: 500;
 }
 
+.quantix-reports__review-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.quantix-reports__review-status--match {
+  color: #389e0d;
+}
+
+.quantix-reports__review-status--mismatch {
+  color: #cf1322;
+}
+
+.quantix-reports__review-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  color: #fff;
+}
+
+.quantix-reports__review-status--match .quantix-reports__review-icon {
+  background: #52c41a;
+}
+
+.quantix-reports__review-status--mismatch .quantix-reports__review-icon {
+  background: #ff4d4f;
+}
+
+.quantix-reports__review-empty {
+  color: #8c8c8c;
+  white-space: nowrap;
+}
+
 .quantix-reports__badge {
   padding: 4px 12px;
   border-radius: 12px;

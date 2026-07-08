@@ -28,6 +28,9 @@ const Scanner = () => {
   const [error, setError] = useState('');
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [partNoInput, setPartNoInput] = useState('');
+  const [partSuggestions, setPartSuggestions] = useState([]);
+  const [showPartSuggestions, setShowPartSuggestions] = useState(false);
+  const [partSuggestionsLoading, setPartSuggestionsLoading] = useState(false);
   const [vendorEditableData, setVendorEditableData] = useState({
     unitWeight: '',
     toleranceWeight: '',
@@ -36,6 +39,7 @@ const Scanner = () => {
   const [isVendorEditing, setIsVendorEditing] = useState(false);
   const [originalVendorData, setOriginalVendorData] = useState(null);
   const scannerRef = useRef(null);
+  const partInputWrapRef = useRef(null);
   const scannerContainerId = 'qr-reader';
 
   const isScanningRef = useRef(false);
@@ -77,6 +81,27 @@ const Scanner = () => {
       setVendorSubmissionsLoading(false);
     }
   }, [shouldReviewVendorSubmissions]);
+
+  const loadPartSuggestions = useCallback(async (query = '') => {
+    setPartSuggestionsLoading(true);
+
+    try {
+      const res = await api.get('/products', {
+        params: {
+          page: 1,
+          limit: 20,
+          ...(query.trim() ? { partNo: query.trim() } : {})
+        }
+      });
+
+      setPartSuggestions(res.data?.products || []);
+    } catch (err) {
+      console.error('Part suggestions load error:', err);
+      setPartSuggestions([]);
+    } finally {
+      setPartSuggestionsLoading(false);
+    }
+  }, []);
 
   const handleScan = useCallback(async (partNo) => {
     if (isScanningRef.current) return;
@@ -590,9 +615,27 @@ const Scanner = () => {
     e.preventDefault();
 
     if (partNoInput) {
+      setShowPartSuggestions(false);
       await safeStopScanner();
       handleScan(partNoInput);
     }
+  };
+
+  const handlePartInputFocus = () => {
+    setShowPartSuggestions(true);
+    loadPartSuggestions(partNoInput);
+  };
+
+  const handlePartInputChange = (e) => {
+    const nextPartNo = e.target.value.toUpperCase();
+    setPartNoInput(nextPartNo);
+    setShowPartSuggestions(true);
+    loadPartSuggestions(nextPartNo);
+  };
+
+  const handlePartSuggestionSelect = (partNo) => {
+    setPartNoInput(partNo);
+    setShowPartSuggestions(false);
   };
 
   const resetScan = async () => {
@@ -667,6 +710,23 @@ const Scanner = () => {
     };
   }, [startScanner, safeStopScanner]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        partInputWrapRef.current &&
+        !partInputWrapRef.current.contains(event.target)
+      ) {
+        setShowPartSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const showVendorReview = scanResult && !isNewProduct && shouldReviewVendorSubmissions && !productDetailsUnlocked;
   useEffect(() => {
     if (
@@ -737,13 +797,50 @@ const Scanner = () => {
             <div className="quantix-scanner__card">
               <h3 className="quantix-scanner__section-title">Or Enter Part No Manually</h3>
               <form onSubmit={handleManualPartNo} className="quantix-scanner__form">
-                <input
-                  name="partNo"
-                  value={partNoInput}
-                  onChange={(e) => setPartNoInput(e.target.value.toUpperCase())}
-                  placeholder="Enter Part No"
-                  className="quantix-scanner__input"
-                />
+                <div className="quantix-scanner__part-suggest" ref={partInputWrapRef}>
+                  <input
+                    name="partNo"
+                    value={partNoInput}
+                    onFocus={handlePartInputFocus}
+                    onChange={handlePartInputChange}
+                    placeholder="Enter Part No"
+                    className="quantix-scanner__input"
+                    autoComplete="off"
+                  />
+                  {showPartSuggestions && (
+                    <div className="quantix-scanner__part-suggestions">
+                      {partSuggestionsLoading && (
+                        <div className="quantix-scanner__part-suggestion-status">
+                          Loading parts...
+                        </div>
+                      )}
+
+                      {!partSuggestionsLoading && partSuggestions.length === 0 && (
+                        <div className="quantix-scanner__part-suggestion-status">
+                          No parts found
+                        </div>
+                      )}
+
+                      {!partSuggestionsLoading && partSuggestions.map((part) => (
+                        <button
+                          key={part._id || part.partNo}
+                          type="button"
+                          className="quantix-scanner__part-suggestion"
+                          onClick={() => handlePartSuggestionSelect(part.partNo)}
+                        >
+                          <span className="quantix-scanner__part-suggestion-no">
+                            {part.partNo}
+                          </span>
+                          {part.description && (
+                            <span className="quantix-scanner__part-suggestion-desc">
+                              {part.description}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button type="submit" className="quantix-scanner__button">
                   Search
                 </button>

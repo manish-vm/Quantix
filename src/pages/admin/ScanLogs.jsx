@@ -59,6 +59,17 @@ const ScanLogs = () => {
     return statusCount !== null && statusCount > 0 ? statusCount : null;
   };
 
+  const getValidatedProductCount = (log) => {
+    const idealCount = Number(log.totalIdealProductCount);
+    const statusCount = getStatusCountValue(log);
+
+    if (!Number.isFinite(idealCount) || statusCount === null) {
+      return log.basedOnReceivedWeightProductCount;
+    }
+
+    return idealCount + statusCount;
+  };
+
   const getFinalValidationStatus = (log) => (
     log.finalValidationStatus || (log.status === 'match' ? 'accepted' : 'rejected')
   );
@@ -189,7 +200,7 @@ const ScanLogs = () => {
                     {getStatusCount(log)}
                   </td>
                   <td>{formatCount(log.totalIdealProductCount)}</td>
-                  <td>{formatCount(log.basedOnReceivedWeightProductCount)}</td>
+                  <td>{formatCount(getValidatedProductCount(log))}</td>
                   <td>{formatCount(getProductDelay(log))}</td>
                   <td>{formatCount(getExcessProduct(log))}</td>
                   <td>

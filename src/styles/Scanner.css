@@ -11,6 +11,7 @@
   width: 100%;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
+  flex: 1;
 }
 
 .quantix-scanner__weight-input {
@@ -26,6 +27,11 @@
 .quantix-scanner__weight-input:focus {
   outline: none;
   box-shadow: none;
+}
+
+.quantix-scanner__weight-input--readonly {
+  background: #f5f5f5;
+  border-radius: 6px;
 }
 
 
@@ -377,6 +383,27 @@
 
 .quantix-scanner__connect-btn--wifi-connected {
   background: #52c41a;
+}
+
+.quantix-scanner__connect-btn--usb {
+  background: #334155;
+}
+
+.quantix-scanner__connect-btn--usb-connected {
+  background: #52c41a;
+}
+
+.quantix-scanner__scale-hint,
+.quantix-scanner__scale-status {
+  margin: -4px 0 12px;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.quantix-scanner__scale-status {
+  color: #1890ff;
+  font-weight: 700;
 }
 
 .quantix-scanner__validation-icon {

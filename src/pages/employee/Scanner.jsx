@@ -23,6 +23,9 @@ const Scanner = () => {
   const [scannerReady, setScannerReady] = useState(false);
   const [connectionMode, setConnectionMode] = useState('manual');
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
+  const [bluetoothStatus, setBluetoothStatus] = useState('');
+  const [usbConnected, setUsbConnected] = useState(false);
+  const [usbStatus, setUsbStatus] = useState('');
   const [wifiUrl, setWifiUrl] = useState('');
   const [wifiConnected, setWifiConnected] = useState(false);
   const [error, setError] = useState('');
@@ -123,6 +126,9 @@ const Scanner = () => {
     setWeight('');
     setConnectionMode('manual');
     setBluetoothConnected(false);
+    setBluetoothStatus('');
+    setUsbConnected(false);
+    setUsbStatus('');
     setWifiConnected(false);
     bluetoothScale.disconnect();
     wifiScale.disconnect();
@@ -428,6 +434,41 @@ const Scanner = () => {
     };
   };
 
+  const renderWeightInputWithStatus = ({ readOnly = false } = {}) => {
+    const live = getLiveWeightStatus();
+    const kind = live?.kind;
+    const diff = live?.displayDiff ?? 0;
+    const diffText = live
+      ? (diff === 0 ? '0' : `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`)
+      : '';
+    const inputBorderClass = kind === 'match'
+      ? 'quantix-scanner__weight-input-wrapper--matched'
+      : kind === 'excess'
+        ? 'quantix-scanner__weight-input-wrapper--excess'
+        : kind === 'short'
+          ? 'quantix-scanner__weight-input-wrapper--short'
+          : '';
+
+    return (
+      <div className={`quantix-scanner__weight-input-wrapper ${inputBorderClass}`}>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Weight in kg"
+          value={weight}
+          readOnly={readOnly}
+          onChange={readOnly ? undefined : (e) => setWeight(e.target.value)}
+          className={`quantix-scanner__weight-input ${readOnly ? 'quantix-scanner__weight-input--readonly' : ''}`}
+        />
+        {live ? (
+          <div className="quantix-scanner__weight-input-adornment">
+            {diffText}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   const handleValidate = async () => {
     if (!scanResult || !weight) return;
 
@@ -566,9 +607,18 @@ const Scanner = () => {
   const handleModeChange = (mode) => {
     setConnectionMode(mode);
     setWeight('');
-    if (mode !== 'bluetooth') {
+    if (mode !== 'bluetooth' && mode !== 'usb') {
       bluetoothScale.disconnect();
       setBluetoothConnected(false);
+      setBluetoothStatus('');
+      setUsbConnected(false);
+      setUsbStatus('');
+    } else if (mode === 'bluetooth') {
+      setUsbConnected(false);
+      setUsbStatus('');
+    } else if (mode === 'usb') {
+      setBluetoothConnected(false);
+      setBluetoothStatus('');
     }
     if (mode !== 'wifi') {
       wifiScale.disconnect();
@@ -576,19 +626,64 @@ const Scanner = () => {
     }
   };
 
-  const handleBluetoothConnect = async () => {
+  const handleSerialScaleConnect = async (source) => {
+    const isUsb = source === 'usb';
+
+    setError('');
+    if (isUsb) {
+      setUsbStatus('Select the USB scale COM/serial port when your browser asks.');
+    } else {
+      setBluetoothStatus('Select the paired scale port when your browser asks.');
+    }
+
     try {
-      await bluetoothScale.connect(
+      const connection = await bluetoothScale.connect(
         null,
         null,
         (newWeight) => {
           setWeight(newWeight.toFixed(2));
+        },
+        {
+          mode: isUsb ? 'usb' : 'serial',
+          baudRate: 9600,
+          label: isUsb ? 'USB Serial Scale' : 'Bluetooth Serial Scale'
         }
       );
-      setBluetoothConnected(true);
+
+      if (isUsb) {
+        setUsbConnected(true);
+        setUsbStatus(
+          connection?.type === 'hid'
+            ? 'Connected via USB HID scale'
+            : `Connected via USB serial at ${connection.baudRate} baud`
+        );
+      } else {
+        setBluetoothConnected(true);
+        setBluetoothStatus(
+          connection?.type === 'serial'
+            ? `Connected via Bluetooth serial at ${connection.baudRate} baud`
+            : 'Connected via BLE Bluetooth'
+        );
+      }
     } catch (err) {
-      setError('Bluetooth connection failed: ' + err.message);
+      setError(`${isUsb ? 'USB' : 'Bluetooth'} connection failed: ${err.message}`);
+
+      if (isUsb) {
+        setUsbStatus('');
+        setUsbConnected(false);
+      } else {
+        setBluetoothStatus('');
+        setBluetoothConnected(false);
+      }
     }
+  };
+
+  const handleBluetoothConnect = async () => {
+    await handleSerialScaleConnect('bluetooth');
+  };
+
+  const handleUsbConnect = async () => {
+    await handleSerialScaleConnect('usb');
   };
 
   const handleWifiConnect = async () => {
@@ -650,6 +745,9 @@ const Scanner = () => {
     setProductDetailsUnlocked(false);
     setConnectionMode('manual');
     setBluetoothConnected(false);
+    setBluetoothStatus('');
+    setUsbConnected(false);
+    setUsbStatus('');
     setWifiConnected(false);
     setIsNewProduct(false);
     setPartNoInput('');
@@ -1184,7 +1282,21 @@ const Scanner = () => {
 
                       {/* UNIT WEIGHT */}
                       <td>
-                        {user?.role === 'vendor' &&
+                        {isNewProduct ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={scanResult.unitWeight}
+                            onChange={(e) =>
+                              setScanResult({
+                                ...scanResult,
+                                unitWeight: e.target.value
+                              })
+                            }
+                            placeholder="Unit weight"
+                            className="quantix-scanner__input"
+                          />
+                        ) : user?.role === 'vendor' &&
                           !isNewProduct &&
                           isVendorEditing ? (
                           <input
@@ -1223,7 +1335,21 @@ const Scanner = () => {
 
                       {/* TOLERANCE */}
                       <td>
-                        {user?.role === 'vendor' &&
+                        {isNewProduct ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={scanResult.toleranceWeight}
+                            onChange={(e) =>
+                              setScanResult({
+                                ...scanResult,
+                                toleranceWeight: e.target.value
+                              })
+                            }
+                            placeholder="Tolerance"
+                            className="quantix-scanner__input"
+                          />
+                        ) : user?.role === 'vendor' &&
                           !isNewProduct &&
                           isVendorEditing ? (
                           <input
@@ -1348,57 +1474,53 @@ const Scanner = () => {
                     <div className="quantix-scanner__mode-buttons">
                       <button onClick={() => handleModeChange('manual')} className={`quantix-scanner__mode-btn ${connectionMode === 'manual' ? 'quantix-scanner__mode-btn--active' : ''}`}>Manual</button>
                       <button onClick={() => handleModeChange('bluetooth')} className={`quantix-scanner__mode-btn ${connectionMode === 'bluetooth' ? 'quantix-scanner__mode-btn--active' : ''}`}>Bluetooth</button>
+                      <button onClick={() => handleModeChange('usb')} className={`quantix-scanner__mode-btn ${connectionMode === 'usb' ? 'quantix-scanner__mode-btn--active' : ''}`}>USB</button>
                       <button onClick={() => handleModeChange('wifi')} className={`quantix-scanner__mode-btn ${connectionMode === 'wifi' ? 'quantix-scanner__mode-btn--active' : ''}`}>WiFi</button>
                     </div>
 
-                    {connectionMode === 'manual' && (() => {
-                      const live = getLiveWeightStatus();
-                      const kind = live?.kind;
-                      const diff = live?.displayDiff ?? 0;
-                      const diffText = live ? (diff === 0 ? '0' : `${diff > 0 ? '+' : ''}${diff.toFixed(3)}`) : '';
-                      const inputBorderClass = kind === 'match'
-                        ? 'quantix-scanner__weight-input-wrapper--matched'
-                        : kind === 'excess'
-                          ? 'quantix-scanner__weight-input-wrapper--excess'
-                          : kind === 'short'
-                            ? 'quantix-scanner__weight-input-wrapper--short'
-                            : '';
-
-                      return (
-                        <div className={`quantix-scanner__weight-input-wrapper ${inputBorderClass}`}>
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Weight in kg"
-                            value={weight}
-                            onChange={(e) => setWeight(e.target.value)}
-                            className="quantix-scanner__weight-input"
-                          />
-                          {live ? (
-                            <div className="quantix-scanner__weight-input-adornment">
-                              {diffText}
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })()}
+                    {connectionMode === 'manual' && renderWeightInputWithStatus()}
 
                     {connectionMode === 'bluetooth' && (
-                      <div className="quantix-scanner__input-row">
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Weight in kg"
-                          value={weight}
-                          readOnly
-                          className="quantix-scanner__input quantix-scanner__input--readonly"
-                        />
-                        <button
-                          onClick={handleBluetoothConnect}
-                          className={`quantix-scanner__connect-btn ${bluetoothConnected ? 'quantix-scanner__connect-btn--bt-connected' : 'quantix-scanner__connect-btn--bt'}`}
-                        >
-                          {bluetoothConnected ? 'BT Connected' : 'Connect BT'}
-                        </button>
+                      <div>
+                        <div className="quantix-scanner__input-row">
+                          {renderWeightInputWithStatus({ readOnly: true })}
+                          <button
+                            onClick={handleBluetoothConnect}
+                            className={`quantix-scanner__connect-btn ${bluetoothConnected ? 'quantix-scanner__connect-btn--bt-connected' : 'quantix-scanner__connect-btn--bt'}`}
+                          >
+                            {bluetoothConnected ? 'BT Connected' : 'Connect BT'}
+                          </button>
+                        </div>
+                        <div className="quantix-scanner__scale-hint">
+                          Pair the scale in Windows first, then choose its Bluetooth COM/serial port. Default baud rate: 9600.
+                        </div>
+                        {bluetoothStatus && (
+                          <div className="quantix-scanner__scale-status">
+                            {bluetoothStatus}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {connectionMode === 'usb' && (
+                      <div>
+                        <div className="quantix-scanner__input-row">
+                          {renderWeightInputWithStatus({ readOnly: true })}
+                          <button
+                            onClick={handleUsbConnect}
+                            className={`quantix-scanner__connect-btn ${usbConnected ? 'quantix-scanner__connect-btn--usb-connected' : 'quantix-scanner__connect-btn--usb'}`}
+                          >
+                            {usbConnected ? 'USB Connected' : 'Connect USB'}
+                          </button>
+                        </div>
+                        <div className="quantix-scanner__scale-hint">
+                          Connect the scale USB cable to this PC, then choose its COM/serial port. Default baud rate: 9600.
+                        </div>
+                        {usbStatus && (
+                          <div className="quantix-scanner__scale-status">
+                            {usbStatus}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1411,14 +1533,7 @@ const Scanner = () => {
                           onChange={(e) => setWifiUrl(e.target.value)}
                           className="quantix-scanner__input"
                         />
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Weight in kg"
-                          value={weight}
-                          readOnly
-                          className="quantix-scanner__input quantix-scanner__input--readonly"
-                        />
+                        {renderWeightInputWithStatus({ readOnly: true })}
                         <button
                           onClick={handleWifiConnect}
                           className={`quantix-scanner__connect-btn ${wifiConnected ? 'quantix-scanner__connect-btn--wifi-connected' : 'quantix-scanner__connect-btn--wifi'}`}
